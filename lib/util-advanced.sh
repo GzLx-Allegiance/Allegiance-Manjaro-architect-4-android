@@ -94,7 +94,7 @@ install_manjaro_de_wm_git() {
             git -C $PROFILES pull 2>$ERR
             check_for_error "pull profiles repo" $?
         else
-            git clone -b manjaro-architect --depth 1 https://github.com/manjaro/iso-profiles.git $PROFILES 2>$ERR
+            git clone -b manjaro-architect --depth 1 https://gitlab.manjaro.org/profiles-and-settings/iso-profiles.git $PROFILES 2>$ERR
             check_for_error "clone profiles repo" $?
         fi
 
