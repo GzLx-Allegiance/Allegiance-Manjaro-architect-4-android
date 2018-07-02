@@ -247,12 +247,12 @@ _FormUefiBody="Partycja UEFI"
 _FormUefiBody2="została już sformatowana\n\nSformatować ponownie? Operacja ta usunie wszystkie dane znajdujące się już na tej partycji."
 
 # UEFI Mountpoint
-_MntUefiBody="Select UEFI Mountpoint.\n\n
-/boot/efi is recommended for multiboot systems.\n
-/boot is required for systemd-boot." # translate me !
-_MntUefiCrypt="Select UEFI Mountpoint.\n\n
-/boot/efi is recommended for multiboot systems and required for full disk encryption. Encrypted /boot is supported only by grub and can lead to slow startup.\n\n
-/boot is required for systemd-boot and for refind when using encryption." # translate me !
+_MntUefiBody="Wybierz punkt montowania UEFI.\n\n
+/boot/efi jest zalecany przy wielu systemach (multiboot).\n
+/boot jest wymagany przy systemd-boot."
+_MntUefiCrypt="Wybierz punkt montowania UEFI\n\n
+/boot/efi jest zalecany przy wielu systemach (multiboot) i jest wymagany przy całkowitym szyfrowaniu dysku. Zaszyfrowany /boot jest wspierany tylko przez grub i może prowadzić do wolniejszego rozruchu.\n\n
+/boot jest wymagany przy systemd-boot i przy szyfracji (refind when using encryption)."
 
 # Extra Partitions
 _ExtPartBody="Wybierz kolejną partycję w dowolnej kolejności lub \"Gotowe\", aby zakończyć."
@@ -302,7 +302,7 @@ _NvidiaConfBody="Został utworzony podstawowy plik konfiguracyjny NVIDIA. Sprawd
 
 # Graphics Card Detection
 _GCDetTitle="Wykryto"
-_GCDetBody="Czy Twoja karta graficzna jest sprzętowa, czy jest opgrogramowaniem wirtualnym"
+_GCDetBody="Czy Twoja karta graficzna jest sprzętowa, czy jest oprogramowaniem wirtualnym?"
 _GCDetBody2="-Wybierz 'Tak', aby zainstalować sterownik OPEN-SOURCE.\n\n-Wybierz \"Nie\", aby otworzyć menu kart graficznych, zawierające sterowniki własnościowe NVIDIA."
 
 #  Install DE Info
@@ -484,18 +484,18 @@ Wciśnij [tab], by zaznaczyć wiele pakietów i [enter], by kontynuować."
 _ExtraPkgTitle="Dodatkowe pakiety"
 _ExtraPkgBody="Czy chciałbyś dodać jakieś dodatkowe pakiety do swojej instalacji?"
 
-_TweaksMenuTitle="System tweaks" # translate me !
-_PerfBody="Settings to configure your system to a specific workload" # translate me !
-_TweaksBody="Various configuration options" # translate me !
-_PerfMenu="Performance" # translate me !
-_SetSchd="I/O schedulers" # translate me !
-_SetSwap="Swap configuration" # translate me !
-_AutologEnable="Enable automatic login" # translate me !
-_HibrnEnable="Enable hibernation" # translate me !
-_LogMenu="View system logs" # translate me !
-_LogBody="Parse system logs with fzf" # translate me !
-_DataRecMenu="Data recovery" # translate me !
-_DataRecBody="Various tools for data backup and recovery" # translate me !
+_TweaksMenuTitle="Ulepszenia systemu"
+_PerfBody="Ustawienia przydatne przy konfigurowaniu swojej własnej stacji roboczej"
+_TweaksBody="Ustawienia różnych konfiguracji"
+_PerfMenu="Wydajność" 
+_SetSchd="I/O schedulers"
+_SetSwap="Ustawienia swap"
+_AutologEnable="Zezwól na automatyczne logowanie"
+_HibrnEnable="Zezwól na hibernację"
+_LogMenu="Pokaż logi systemowe"
+_LogBody="Parsuj logi systemowe z fzf"
+_DataRecMenu="Odzyskiwanie danych"
+_DataRecBody="Różne narzędzia przydatne przy odzyskiwaniu danych i tworzenia kopii zapasowej."
 
-_HostCache="Choose pacman cache" # translate me !
-_HostCacheBody="Do you want to use the pacman cache of the running system instead of the installation target? This can reduce the size of the required downloads in the installation." # translate me !
+_HostCache="Wybierz pacman cache"
+_HostCacheBody="Czy chcesz użyć pacman cache działającego systemu zamiast zajmować się celem instalacyjnym? Takie działanie może zredukować rozmiar wymaganych pobrań podczas instalacji"
