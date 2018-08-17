@@ -391,7 +391,9 @@ install_refind()
     inst_needed refind-drivers
     # Check if the volume is removable. If so, install all drivers
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
-    root_device=$(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')   
+    root_device=$(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
+    # Clean the configuration in case there is previous one because the configuration part is not idempotent
+    [[ -e "/mnt/boot/refind_linux.conf" ]] && rm /mnt/boot/refind_linux.conf  
     ## install refind 
     if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
         refind-install --root /mnt --alldrivers --yes 2>$ERR
@@ -415,10 +417,6 @@ install_refind()
     # Mount as rw
     sed -i 's/ro\ /rw\ \ /g' /mnt/boot/refind_linux.conf
 
-    # Configure for intel microcode
-    #if [[ -e /boot/intel-ucode.img ]]; then 
-    #    sed -i "s|\"$|\ initrd=/boot/intel-ucode.img\"|g" /mnt/boot/refind_linux.conf
-    #fi
     # Boot in graphics mode 
     sed -i -e '/use_graphics_for/ s/^#*//' ${MOUNTPOINT}${UEFI_MOUNT}/EFI/refind/refind.conf
     # Set appropriate rootflags if installed on btrs subvolume
@@ -427,8 +425,16 @@ install_refind()
         sed -i "s|\"$|\ $rootflag\"|g" /mnt/boot/refind_linux.conf
     fi
 
-    # LUKS
-    if [[ $LUKS == 1 ]]; then
+    # LVM on LUKS  
+    if [[ $LUKS == 1 ]] && [[ $(lsblk -i | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
+        mapper_name="$(mount | awk '/\/mnt / {print $1}')"
+        ROOTY_PARTY="/dev/$(lsblk -i | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
+        bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
+        crypt_name="$(lsblk -i | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
+        sed -i "s|root=.* |cryptdevice=$bl_root:$crypt_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
+        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+    # Plain LUKS
+    elif [[ $LUKS == 1 ]]; then
         mapper_name="$(mount | awk '/\/mnt / {print $1}')"
         ROOTY_PARTY="/dev/$(lsblk -i | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
         bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
@@ -436,13 +442,6 @@ install_refind()
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
         
-    # Set the root parameter if encrypted or on LVM
-    #ROOTY_PARTY="/dev/$(lsblk -lno NAME,MOUNTPOINT | grep "/mnt$" | awk '{print $1}')"
-    #if [[ $(echo $ROOTY_PARTY | grep "/dev/mapper/") != "" ]]; then
-    #    bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-    #    sed -i "s/root=.* /root=$bl_root /g" /mnt/boot/refind_linux.conf
-    #    sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
-    #fi
     basestrap ${MOUNTPOINT} refind-theme-maia 
     DIALOG " $_InstUefiBtTitle " --infobox "\n$_RefindReady\n " 0 0
     sleep 2
