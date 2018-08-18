@@ -536,6 +536,9 @@ bios_bootloader() {
                 # If root is on btrfs volume, amend grub
                 [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]] && \
                   sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+                # Same setting is needed for LVM 
+                [[ LVM == 1 ]] && \
+                  sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
                 
                 DIALOG " $_InstGrub " --infobox "\n$_PlsWaitBody\n " 0 0
                 dd if=/dev/zero of=$DEVICE seek=1 count=2047
@@ -616,17 +619,21 @@ boot_encrypted_setting() {
         root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
         # Check if root is encrypted
         if  [[ "$LUKS" == 1 ]]; then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         elif $(lsblk "/dev/mapper/$root_name" | grep -q 'crypt' ); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         elif $(lsblk | grep "/mnt$" | grep -q 'crypt' ); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         # Check if root is on encrypted lvm volume
         elif $(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         fi
     else
@@ -637,10 +644,12 @@ boot_encrypted_setting() {
             setup_luks_keyfile
         # Check if the /boot is inside encrypted lvm volume
         elif $(lsblk -i | tac | sed -n -e "/$boot_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         elif $(lsblk "/dev/mapper/$boot_name" | grep -q 'crypt' ); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
+            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         fi
     fi
