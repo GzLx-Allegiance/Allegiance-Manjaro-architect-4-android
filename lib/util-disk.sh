@@ -890,7 +890,7 @@ make_esp() {
 
             # If it is already a fat/vfat partition...
             if [[ $(fsck -N $PARTITION | grep fat) ]]; then
-                DIALOG " $_PrepMntPart " --yesno "\n$_FormUefiBody $PARTITION $_FormUefiBody2\n " 0 0 && {
+                DIALOG " $_PrepMntPart " --defaultno --yesno "\n$_FormUefiBody $PARTITION $_FormUefiBody2\n " 0 0 && {
                     mkfs.vfat -F32 ${PARTITION} >/dev/null 2>$ERR
                     check_for_error "mkfs.vfat -F32 ${PARTITION}" "$?"
                 } # || return 0
