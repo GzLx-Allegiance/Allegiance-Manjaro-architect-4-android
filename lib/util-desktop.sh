@@ -16,7 +16,7 @@ setup_graphics_card() {
 
     if [[ $(cat /tmp/.driver) != "" ]]; then
         clear
-        arch_chroot "mhwd -f -i pci $(cat /tmp/.driver)" 2>$ERR
+        mhwd --pmcachedir "$cachepath" --pmroot $MOUNTPOINT -f -i pci $(cat /tmp/.driver) 2>$ERR
         check_for_error "install $(cat /tmp/.driver)" $?
         touch /mnt/.video_installed
 
@@ -169,7 +169,7 @@ install_manjaro_de_wm() {
     echo "" > /tmp/.desktop
 
     # DE/WM Menu
-    DIALOG " $_InstDETitle " --radiolist "\n$_InstManDEBody\n$(evaluate_profiles)\n\n$_UseSpaceBar\n " 0 0 12 \
+    DIALOG " $_InstDETitle " --radiolist "\n$_InstManDEBody\n$(evaluate_profiles)\n\n$_UseSpaceBar\n " 0 0 14 \
       $(echo $PROFILES/{manjaro,community}/* | xargs -n1 | cut -f7 -d'/' | grep -vE "netinstall|architect" | awk '$0=$0" - off"')  2> /tmp/.desktop
 
     # If something has been selected, install

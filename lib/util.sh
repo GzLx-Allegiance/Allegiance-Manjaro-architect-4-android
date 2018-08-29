@@ -598,7 +598,9 @@ set_cache()
   DIALOG " $_HostCache " --yesno "\n$_HostCacheBody\n " 0 0
   if [[ $? -eq 0 ]]; then
     hostcache=true
+    cachepath="/var/cache/pacman/pkg/"
   else
     hostcache=false
+    cachepath="/mnt/var/cache/pacman/pkg/"
   fi
 }

@@ -45,8 +45,10 @@ mk_connection
 check_connection
 #greeting
 if [[ -e /run/miso/bootmnt ]]; then
-	hostcache=true
-else
 	hostcache=false
+	cachepath="/mnt/var/cache/pacman/pkg/"
+else
+	hostcache=true
+	cachepath="/var/cache/pacman/pkg/"
 fi
 main_menu
