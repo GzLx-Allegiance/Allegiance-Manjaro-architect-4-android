@@ -431,12 +431,12 @@ install_graphics_menu() {
 
     case $(cat ${ANSWER}) in
         "1") clear
-            arch_chroot "mhwd -a pci free 0300" 2>$ERR
+            mhwd --pmcachedir "$cachepath" --pmroot $MOUNTPOINT -a pci free 0300 2>$ERR
             check_for_error "$_InstFree" $?
             touch /mnt/.video_installed
             ;;
         "2") clear
-            arch_chroot "mhwd -a pci nonfree 0300" 2>$ERR
+            mhwd --pmcachedir "$cachepath" --pmroot $MOUNTPOINT -a pci nonfree 0300 2>$ERR
             check_for_error "$_InstProp" $?
             touch /mnt/.video_installed
             ;;
