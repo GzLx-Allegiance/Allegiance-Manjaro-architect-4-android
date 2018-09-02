@@ -20,7 +20,7 @@ main_menu() {
         fi
 
         DIALOG " $_MMTitle " --default-item ${HIGHLIGHT} \
-          --menu "\n$_MMNewBody\n " 0 0 6 \
+          --menu "\n$_MMNewBody\n " 20 60 6 \
           "1" "$_PrepMenuTitle|>" \
           "2" "$_InstDsMenuTitle|>" \
           "3" "$_InstCrMenuTitle|>" \
@@ -94,7 +94,7 @@ install_desktop_system_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         submenu 7
-        DIALOG " $_InstDsMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_MMBody\n$_InstDsMenuBody\n " 0 0 7 \
+        DIALOG " $_InstDsMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_MMBody\n$_InstDsMenuBody\n " 22 60 7 \
           "1" "$_InstDEStable|>" \
           "2" "$_InstBootldr|>" \
           "3" "$_ConfBseMenuTitle|>" \
@@ -132,7 +132,7 @@ install_custom_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         submenu 9
-        DIALOG " $_InstCsMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_InstCsMenuBody\n " 0 0 9 \
+        DIALOG " $_InstCsMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_InstCsMenuBody\n " 22 60 9 \
           "1" "$_InstBse" \
           "2" "$_InstDE|>" \
           "3" "$_InstBootldr|>" \
@@ -176,7 +176,7 @@ system_rescue_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         submenu 8
-        DIALOG " $_SysRescTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_SysRescBody\n " 0 0 10 \
+        DIALOG " $_SysRescTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_SysRescBody\n " 24 60 10 \
           "1" "$_InstDrvTitle|>" \
           "2" "$_InstBootldr|>" \
           "3" "$_ConfBseMenuTitle" \
@@ -224,12 +224,12 @@ prep_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         submenu 9
-        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 0 0 10 \
+        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 20 60 10 \
           "1" "$_VCKeymapTitle" \
           "2" "$_DevShowOpt" \
-          "3" "$_PrepPartDisk" \
-          "4" "$_PrepLUKS" \
-          "5" "$_PrepLVM $_PrepLVM2" \
+          "3" "$_PrepPartDisk|>" \
+          "4" "$_PrepLUKS|>" \
+          "5" "$_PrepLVM $_PrepLVM2|>" \
           "6" "$_PrepMntPart" \
           "7" "$_PrepMirror|>" \
           "8" "$_PrepPacKey" \
@@ -369,7 +369,7 @@ config_cli_base_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         ssubmenu 7
-        DIALOG " $_ConfBseMenuTitle " --default-item ${HIGHLIGHT_SSUB} --menu "\n$_ConfBseBody\n " 0 0 7 \
+        DIALOG " $_ConfBseMenuTitle " --default-item ${HIGHLIGHT_SSUB} --menu "\n$_ConfBseBody\n " 22 60 7 \
           "1" "$_ConfBseFstab" \
           "2" "$_ConfBseHost" \
           "3" "$_ConfBseSysLoc" \

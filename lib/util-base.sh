@@ -310,7 +310,7 @@ uefi_bootloader() {
     #Ensure again that efivarfs is mounted
     [[ -z $(mount | grep /sys/firmware/efi/efivars) ]] && mount -t efivarfs efivarfs /sys/firmware/efi/efivars
 
-    DIALOG " $_InstUefiBtTitle " --menu "\n$_bootloaderInfo\n " 0 0 3 \
+    DIALOG " $_InstUefiBtTitle " --menu "\n$_bootloaderInfo\n " 23 60 3 \
       "1" "grub" \
       "2" "refind" \
       "3" "systemd-boot" 2>/tmp/.bootloader
@@ -674,9 +674,9 @@ recheck_luks() {
 # Function will not allow incorrect UUID type for installed system.
 generate_fstab() {
     DIALOG " $_ConfBseFstab " --menu "\n$_FstabBody\n " 0 0 4 \
+      "fstabgen -U -p" "$_FstabDevUUID" \
       "fstabgen -p" "$_FstabDevName" \
       "fstabgen -L -p" "$_FstabDevLabel" \
-      "fstabgen -U -p" "$_FstabDevUUID" \
       "fstabgen -t PARTUUID -p" "$_FstabDevPtUUID" 2>${ANSWER}
 
     if [[ $(cat ${ANSWER}) != "" ]]; then

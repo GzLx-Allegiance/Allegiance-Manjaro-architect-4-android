@@ -240,7 +240,7 @@ set_language() {
     fi
 
     # Generate locale and set language
-    DIALOG " $_Config " --infobox "\n$_ApplySet\n " 0 0
+    DIALOG " $_Config " --infobox "\n$_ApplySet\n " 6 40
     sed -i "s/#${CURR_LOCALE}/${CURR_LOCALE}/" /etc/locale.gen
     locale-gen >/dev/null 2>$ERR
     export LANG=${CURR_LOCALE}
@@ -403,7 +403,7 @@ configure_mirrorlist() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         ssubmenu 4
-        DIALOG " $_MirrorlistTitle " --default-item ${HIGHLIGHT_SSUB} --menu "\n$_MirrorlistBody\n " 0 0 4 \
+        DIALOG " $_MirrorlistTitle " --default-item ${HIGHLIGHT_SSUB} --menu "\n$_MirrorlistBody\n " 25 60 4 \
           "1" "$_MirrorPacman" \
           "2" "$_MirrorConfig" \
           "3" "$_MirrorRankTitle" \
@@ -568,7 +568,7 @@ final_check() {
 exit_done() {
     if [[ $(lsblk -o MOUNTPOINT | grep ${MOUNTPOINT} 2>/dev/null) != "" ]]; then
         final_check
-        dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "$(printf "\n$_CloseInstBody\n$(cat ${CHECKLIST})\n ")" 0 0
+        dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "$(printf "\n$_CloseInstBody\n$(cat ${CHECKLIST})\n ")" 20 40
         if [[ $? -eq 0 ]]; then
             check_for_error "exit installer."
             dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "\n$_LogInfo ${TARGLOG}\n " 0 0
@@ -582,7 +582,7 @@ exit_done() {
             [[ menu_opt == "advanced" ]] && main_menu_full || main_menu
         fi
     else
-        dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "\n$_CloseInstBody\n " 0 0
+        dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "\n$_CloseInstBody\n " 10 40
         if [[ $? -eq 0 ]]; then
             umount_partitions
             clear
@@ -595,7 +595,7 @@ exit_done() {
 
 set_cache()
 {
-  DIALOG " $_HostCache " --yesno "\n$_HostCacheBody\n " 0 0
+  DIALOG " $_HostCache " --yesno "\n$_HostCacheBody\n " 15 40
   if [[ $? -eq 0 ]]; then
     hostcache=true
     cachepath="/var/cache/pacman/pkg/"

@@ -34,7 +34,7 @@ select_device() {
         DEVICE="${DEVICE} ${i}"
     done
 
-    DIALOG " $_DevSelTitle " --menu "\n$_DevSelBody\n " 0 0 4 ${DEVICE} 2>${ANSWER} || return 1
+    DIALOG " $_DevSelTitle " --menu "\n$_DevSelBody\n " 20 60 4 ${DEVICE} 2>${ANSWER} || return 1
     DEVICE=$(cat ${ANSWER})
 }
 
@@ -487,7 +487,7 @@ luks_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         LUKS_OPT=""
-        DIALOG " $_PrepLUKS " --menu "\n$_LuksMenuBody\n$_LuksMenuBody2\n$_LuksMenuBody3\n " 0 0 4 \
+        DIALOG " $_PrepLUKS " --menu "\n$_LuksMenuBody\n$_LuksMenuBody2\n$_LuksMenuBody3\n " 25 60 4 \
           "$_LuksOpen" "cryptsetup open --type luks" \
           "$_LuksEncrypt" "cryptsetup -q luksFormat" \
           "$_LuksEncryptAdv" "cryptsetup -q -s -c luksFormat" \
@@ -616,7 +616,7 @@ lvm_menu() {
         sleep 1
         lvm_detect
 
-        DIALOG " $_PrepLVM $_PrepLVM2 " --menu "\n$_LvmMenu\n " 0 0 4 \
+        DIALOG " $_PrepLVM $_PrepLVM2 " --menu "\n$_LvmMenu\n " 22 60 4 \
           "$_LvmCreateVG" "vgcreate -f, lvcreate -L -n" \
           "$_LvmDelVG" "vgremove -f" \
           "$_LvMDelAll" "lvrmeove, vgremove, pvremove -f" \
@@ -924,7 +924,7 @@ make_esp() {
 }
 mount_partitions() {
     # Warn users that they CAN mount partitions without formatting them!
-    DIALOG " $_PrepMntPart " --msgbox "\n$_WarnMount1 '$_FSSkip' $_WarnMount2\n " 0 0
+    DIALOG " $_PrepMntPart " --msgbox "\n$_WarnMount1 '$_FSSkip' $_WarnMount2\n " 15 65
 
     # LVM Detection. If detected, activate.
     lvm_detect
