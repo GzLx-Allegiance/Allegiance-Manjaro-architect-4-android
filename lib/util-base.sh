@@ -337,10 +337,10 @@ install_grub_uefi() {
     
     clear
     if $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
-        basestrap ${MOUNTPOINT} grub-btrfs efibootmgr dosfstools 2>$ERR
+        basestrap ${MOUNTPOINT} grub-quiet grub-btrfs efibootmgr dosfstools 2>$ERR
         check_for_error "$FUNCNAME grub" $? || return 1
     else
-        basestrap ${MOUNTPOINT} grub efibootmgr dosfstools 2>$ERR
+        basestrap ${MOUNTPOINT} grub-quiet efibootmgr dosfstools 2>$ERR
         check_for_error "$FUNCNAME grub" $? || return 1
     fi
 
@@ -507,8 +507,9 @@ install_systemd_boot() {
 # Grub auto-detects installed kernels, etc. Syslinux does not, hence the extra code for it.
 bios_bootloader() {
     DIALOG " $_InstBiosBtTitle " --menu "\n$_InstGrubBody\n " 0 0 2 \
+      "grub-quiet" "" \
       "grub" "" \
-      "grub + os-prober" "" 2>${PACKAGES} || return 0
+      "grub-quiet + os-prober" "" 2>${PACKAGES} || return 0
     clear
 
     # If something has been selected, act
