@@ -348,8 +348,8 @@ install_grub_uefi() {
     
     # if root is encrypted, amend /etc/default/grub
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
-    root_device=$(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
-    root_part=$(lsblk -i | tac | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
+    root_device=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
+    root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
     boot_encrypted_setting
     # If encryption used amend grub
     [[ $(cat /tmp/.luks_dev) != "" ]] && sed -i "s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" ${MOUNTPOINT}/etc/default/grub
@@ -391,7 +391,7 @@ install_refind()
     inst_needed refind-drivers
     # Check if the volume is removable. If so, install all drivers
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
-    root_device=$(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
+    root_device=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
     # Clean the configuration in case there is previous one because the configuration part is not idempotent
     [[ -e "/mnt/boot/refind_linux.conf" ]] && rm /mnt/boot/refind_linux.conf  
     ## install refind 
@@ -426,17 +426,17 @@ install_refind()
     fi
 
     # LVM on LUKS  
-    if [[ $LUKS == 1 ]] && [[ $(lsblk -i | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
+    if [[ $LUKS == 1 ]] && [[ $(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
         mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        ROOTY_PARTY="/dev/$(lsblk -i | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
+        ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
         bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-        crypt_name="$(lsblk -i | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
+        crypt_name="$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
         sed -i "s|root=.* |cryptdevice=$bl_root:$crypt_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     # Plain LUKS
     elif [[ $LUKS == 1 ]]; then
         mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        ROOTY_PARTY="/dev/$(lsblk -i | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
+        ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
         bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
         sed -i "s|root=.* |cryptdevice=$bl_root:$root_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
@@ -494,7 +494,7 @@ install_systemd_boot() {
 
     # Check if the volume is removable. If so, dont use autodetect
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
-    root_device=$(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
+    root_device=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
     if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
         # Remove autodetect hook
         sed -i -e '/^HOOKS=/s/\ autodetect//g' /mnt/etc/mkinitcpio.conf
@@ -605,7 +605,7 @@ setup_luks_keyfile() {
     # Add keyfile to luks
     echo "Adding the keyfile to the LUKS configuration"
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
-    root_part=$(lsblk -i | tac | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
+    root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
     cryptsetup luksAddKey /dev/"$root_part" /mnt/crypto_keyfile.bin || echo "Something vent wrong with adding the LUKS key. Is /dev/$root_part the right partition?"
     # Add keyfile to initcpio
     grep -q '/crypto_keyfile.bin' /mnt/etc/mkinitcpio.conf || sed -i '/FILES/ s~)~/crypto_keyfile.bin)~' /mnt/etc/mkinitcpio.conf && echo "Adding keyfile to the initcpio"
@@ -631,7 +631,7 @@ boot_encrypted_setting() {
             sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
         # Check if root is on encrypted lvm volume
-        elif $(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
+        elif $(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
             grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
             sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
@@ -643,7 +643,7 @@ boot_encrypted_setting() {
             grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
             setup_luks_keyfile
         # Check if the /boot is inside encrypted lvm volume
-        elif $(lsblk -i | tac | sed -n -e "/$boot_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
+        elif $(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$boot_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
             grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
             sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
             setup_luks_keyfile
@@ -664,7 +664,7 @@ recheck_luks() {
     elif $(lsblk | grep "/mnt$" | grep -q 'crypt' ) && [[ $(lsblk | grep "/mnt/boot$") == "" ]]; then
         LUKS=1
     # Check if root is on encrypted lvm volume
-    elif $(lsblk -i | tac | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
+    elif $(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
         LUKS=1
     else
         true
