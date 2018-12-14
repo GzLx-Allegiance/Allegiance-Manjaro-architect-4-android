@@ -257,7 +257,7 @@ set_language() {
 # set locale, keymap and font and source translation file for installer
 select_language() {
     fl="1" # terminus-font variation supporting most languages
-    DIALOG " Select Language " --default-item '3' --menu "\n " 0 0 12 \
+    DIALOG " Select Language " --default-item '3' --menu "\n " 0 0 13 \
       "1" $"Danish|(da_DK)" \
       "2" $"Dutch|(nl_NL)" \
       "3" $"English|(en_**)" \
@@ -269,7 +269,8 @@ select_language() {
       "9" $"Portuguese|(pt_PT)" \
       "10" $"Portuguese [Brasil]|(pt_BR)" \
       "11" $"Russian|(ru_RU)" \
-      "12" $"Spanish|(es_ES)" 2>${ANSWER}
+      "12" $"Spanish|(es_ES)" \
+      "13" $"Ukranian|(uk_UA)" 2>${ANSWER}
 
     case $(cat ${ANSWER}) in
         "1") TRANS="danish"
@@ -323,6 +324,11 @@ select_language() {
              CURR_LOCALE="es_ES.UTF-8"
              KEYMAP="es"
              ;;
+        "13") TRANS="ukrainian"
+             CURR_LOCALE="uk_UA.UTF-8"
+             KEYMAP="ua"
+             fl="u"
+
         *) clear && exit 0
              ;;
     esac
