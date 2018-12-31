@@ -328,7 +328,7 @@ select_language() {
              CURR_LOCALE="uk_UA.UTF-8"
              KEYMAP="ua"
              fl="u"
-
+             ;;
         *) clear && exit 0
              ;;
     esac
@@ -467,7 +467,7 @@ arch_chroot() {
 
 # Ensure that a partition is mounted
 check_mount() {
-    if [[ $(lsblk -o MOUNTPOINT | grep ${MOUNTPOINT}) == "" ]]; then
+    if [[ $(findmnt -nl ${MOUNTPOINT}) == "" ]]; then
         DIALOG " $_ErrTitle " --msgbox "\n$_ErrNoMount\n " 0 0
         ANSWER=0
         HIGHLIGHT=0
@@ -572,7 +572,7 @@ final_check() {
 }
 
 exit_done() {
-    if [[ $(lsblk -o MOUNTPOINT | grep ${MOUNTPOINT} 2>/dev/null) != "" ]]; then
+    if [[ $(findmnt --list -o TARGET | grep ${MOUNTPOINT} 2>/dev/null) != "" ]]; then
         final_check
         dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --yesno "$(printf "\n$_CloseInstBody\n$(cat ${CHECKLIST})\n ")" 20 40
         if [[ $? -eq 0 ]]; then
