@@ -62,6 +62,23 @@ enable_services() {
                 echo "no display manager was installed"
                 sleep 2
             fi
+
+            # if we are using a zfs root we should enable the zfs services
+            if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+                arch_chroot "systemctl enable zfs.target" 2>$ERR
+                check_for_error "enable zfs.target" "$?"
+                arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
+                check_for_error "enable zfs-import-cache" "$?"
+                arch_chroot "systemctl enable zfs-mount" 2>$ERR
+                check_for_error "enable zfs-mount" "$?"
+                arch_chroot "systemctl enable zfs-import.target" 2>$ERR
+                check_for_error "enable zfs-import.target" "$?"
+                # we also need create the cachefile
+                zpool set cachefile=/etc/zfs/zpool.cache zpmain 2>$ERR
+                check_for_error "create zpool cache" "$?"
+                cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
+                check_for_error "copy cache file" "$?"
+            fi
 }
 
 install_extra() {
@@ -286,6 +303,24 @@ install_base() {
 
     [[ $((LVM + LUKS + BTRFS_ROOT + ZFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
 
+
+    # if we are using a zfs root we should enable the zfs services
+    if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+        arch_chroot "systemctl enable zfs.target" 2>$ERR
+        check_for_error "enable zfs.target" "$?"
+        arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
+        check_for_error "enable zfs-import-cache" "$?"
+        arch_chroot "systemctl enable zfs-mount" 2>$ERR
+        check_for_error "enable zfs-mount" "$?"
+        arch_chroot "systemctl enable zfs-import.target" 2>$ERR
+        check_for_error "enable zfs-import.target" "$?"
+        # we also need create the cachefile
+        zpool set cachefile=/etc/zfs/zpool.cache zpmain 2>$ERR
+        check_for_error "create zpool cache" "$?"
+        cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
+        check_for_error "copy cache file" "$?"
+    fi
+
     # If specified, copy over the pacman.conf file to the installation
     if [[ $COPY_PACCONF -eq 1 ]]; then
         cp -f /etc/pacman.conf ${MOUNTPOINT}/etc/pacman.conf
@@ -375,9 +410,9 @@ install_grub_uefi() {
         # temporary - we can remove this once we add support for mounting zfs
         UEFI_MOUNT=/boot/efi
         # there has to be a better way to do this
-        echo -e "# /bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
-        echo -e "# /bin/bash\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
 
     chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
@@ -596,9 +631,9 @@ bios_bootloader() {
                     echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
                     export ZPOOL_VDEV_NAME_PATH=YES
                     # there has to be a better way to do this
-                    echo -e "# /bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 else
-                    echo -e "# /bin/bash\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo -e "# "'!'"/bin/bash\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
                 chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
@@ -758,6 +793,13 @@ generate_fstab() {
     fi
     # Edit fstab in case of btrfs subvolumes
     sed -i "s/subvolid=.*,subvol=\/.*,//g" /mnt/etc/fstab
+
+    # remove any zfs datasets that are mounted by zfs
+    for MSOURCE in $(cat ${MOUNTPOINT}/etc/fstab | grep "^[a-z,A-Z]" | awk '{print $1}'); do
+    if [ $(zfs list -H -o mountpoint,name | grep "^/"  | awk '{print $2}'   | grep "^${MSOURCE}$") ]; then
+        sed -e "\|^${MSOURCE}[[:space:]]| s/^#*/#/" -i ${MOUNTPOINT}/etc/fstab
+    fi
+done
 }
 
 # locale array generation code adapted from the Manjaro 0.8 installer
