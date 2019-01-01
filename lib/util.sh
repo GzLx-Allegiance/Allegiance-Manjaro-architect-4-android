@@ -550,7 +550,7 @@ final_check() {
         # Check if bootloader is installed
         if [[ $SYSTEM == "BIOS" ]]; then
             arch_chroot "pacman -Qq grub" &> /dev/null || echo "- $_BootlCheck" >> ${CHECKLIST}
-        elif ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/manjaro_grub/grubx64.efi ]] && ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/refind/refind_x64.efi ]] && ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/systemd/systemd-bootx64.efi ]]; then
+        elif ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/Manjaro/grubx64.efi ]] && ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/refind/refind_x64.efi ]] && ! [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/EFI/systemd/systemd-bootx64.efi ]]; then
             echo "- $_BootlCheck" >> ${CHECKLIST}
         fi
 

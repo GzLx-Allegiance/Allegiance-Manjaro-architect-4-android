@@ -268,7 +268,7 @@ install_base() {
     # If root is on nilfs2 volume, amend mkinitcpio.conf
     [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == nilfs2 ]] && sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf && \
       check_for_error "root on nilfs2 volume. Amend mkinitcpio."
-    
+
     recheck_luks
 
     # add luks and lvm hooks as needed
@@ -334,7 +334,11 @@ install_grub_uefi() {
     else
         bootid="manjaro"
     fi
-    
+    # For quiet grub, remove fsck
+    if grep "^HOOKS"  ${MOUNTPOINT}/etc/mkinitcpio.conf | grep -q fsck; then
+        sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+        arch_chroot "mkinitcpio -P" 
+    fi
     clear
     if $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
         basestrap ${MOUNTPOINT} grub-btrfs efibootmgr dosfstools 2>$ERR
@@ -548,6 +552,11 @@ bios_bootloader() {
                 #grub_mkconfig
                 basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
                 check_for_error "$FUNCNAME grub" $?
+                # For quiet grub, remove fsck
+                if grep "^HOOKS"  ${MOUNTPOINT}/etc/mkinitcpio.conf | grep -q fsck; then
+                    sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    arch_chroot "mkinitcpio -P" 
+                fi
             fi
         else
             # Syslinux
