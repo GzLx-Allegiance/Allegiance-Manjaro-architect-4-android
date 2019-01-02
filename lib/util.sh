@@ -64,6 +64,8 @@ VG_PARTS=""
 LVM_SEP_BOOT=0      # 1 = Seperate /boot, 2 = seperate /boot & LVM
 LV_SIZE_INVALID=0   # Is LVM LV size entered valid?
 VG_SIZE_TYPE=""     # Is VG in Gigabytes or Megabytes?
+ZFS=0
+ZFS_ZPOOL_NAME=""
 
 # Mounting
 MOUNT=""                        # Installation: All other mounts branching

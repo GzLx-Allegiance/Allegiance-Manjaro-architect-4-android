@@ -223,18 +223,19 @@ prep_menu() {
     local PARENT="$FUNCNAME"
     declare -i loopmenu=1
     while ((loopmenu)); do
-        submenu 9
-        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 20 60 10 \
+        submenu 10
+        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 20 60 11 \
           "1" "$_VCKeymapTitle" \
           "2" "$_DevShowOpt" \
           "3" "$_PrepPartDisk|>" \
           "4" "$_PrepLUKS|>" \
           "5" "$_PrepLVM $_PrepLVM2|>" \
-          "6" "$_PrepMntPart" \
-          "7" "$_PrepMirror|>" \
-          "8" "$_PrepPacKey" \
-          "9" "$_HostCache" \
-          "10" "$_Back" 2>${ANSWER}
+          "6" "$_PrepZFS|>" \
+          "7" "$_PrepMntPart" \
+          "8" "$_PrepMirror|>" \
+          "9" "$_PrepPacKey" \
+          "10" "$_HostCache" \
+          "11" "$_Back" 2>${ANSWER}
         HIGHLIGHT_SUB=$(cat ${ANSWER})
 
         case $(cat ${ANSWER}) in
@@ -250,11 +251,13 @@ prep_menu() {
                  ;;
             "5") lvm_menu
                  ;;
-            "6") mount_partitions
+            "6") zfs_menu
                  ;;
-            "7") configure_mirrorlist
+            "7") mount_partitions
                  ;;
-            "8") clear
+            "8") configure_mirrorlist
+                 ;;
+            "9") clear
                  (
                     ctrlc(){
                       return 0
@@ -265,7 +268,7 @@ prep_menu() {
                     check_for_error 'refresh pacman-keys'
                   )
                  ;;
-            "9") set_cache
+            "10") set_cache
                  ;;
             *) loopmenu=0
                 return 0

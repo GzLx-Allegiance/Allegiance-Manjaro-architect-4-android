@@ -74,7 +74,7 @@ enable_services() {
                 arch_chroot "systemctl enable zfs-import.target" 2>$ERR
                 check_for_error "enable zfs-import.target" "$?"
                 # we also need create the cachefile
-                zpool set cachefile=/etc/zfs/zpool.cache zpmain 2>$ERR
+                zpool set cachefile=/etc/zfs/zpool.cache $(findmnt ${MOUNTPOINT} -lno SOURCE | awk -F / '{print $1}') 2>$ERR
                 check_for_error "create zpool cache" "$?"
                 cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
                 check_for_error "copy cache file" "$?"
