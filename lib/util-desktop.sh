@@ -277,6 +277,9 @@ install_desktop() {
         fi
     done
 
+    local zfs_is_checked
+    [[ $ZFS == 1 ]] && zfs_is_checked="on" || zfs_is_checked="off"
+
     # Choose wanted kernel modules
     DIALOG " $_ChsAddPkgs " --checklist "\n$_UseSpaceBar\n " 0 0 12 \
       "KERNEL-headers" "-" off \
@@ -289,8 +292,8 @@ install_desktop() {
       "KERNEL-vhba-module" "-" off \
       "KERNEL-virtualbox-guest-modules" "-" off \
       "KERNEL-virtualbox-host-modules" "-" off \
-      "KERNEL-spl" "-" off \
-      "KERNEL-zfs" "-" off 2>/tmp/.modules || return 0
+      "KERNEL-spl" "-" $zfs_is_checked \
+      "KERNEL-zfs" "-" $zfs_is_checked 2>/tmp/.modules || return 0
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
