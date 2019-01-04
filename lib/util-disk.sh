@@ -1195,7 +1195,7 @@ zfs_menu_manual() {
 zfs_menu() {
     # check for zfs support
     modprobe zfs 2>$ERR
-    if [ $(cat $ERR)]; then
+    if [[ $(cat $ERR) ]]; then
         DIALOG " $_zfsZpoolCTitle " --infobox "\n$_zfsNotSupported\n " 0 0
         sleep 3
         return 0
