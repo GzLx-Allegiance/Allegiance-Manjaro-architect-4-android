@@ -1037,6 +1037,7 @@ zfs_new_ds() {
     else
         # no imported zpools
         DIALOG " $_zfsSelectZpoolMenuTitle " --infobox "\n$_zfsZpoolNoPool\n " 0 0
+        sleep 3
         return 0
     fi
 
@@ -1106,6 +1107,7 @@ zfs_destroy_dataset() {
     else
         # no available datasets
         DIALOG " $_zfsDestroyMenuTitle " --infobox "\n$_zfsDatasetNotFound\n " 0 0
+        sleep 3
         return 0
     fi
     
@@ -1117,15 +1119,53 @@ zfs_destroy_dataset() {
     fi
 }
 
+zfs_set_property () {
+   local zlist
+
+    # get dataset list and format for the menu
+    local zds
+    for zds in $(zfs_list_datasets); do
+        zlist="${zlist} ${zds} -"
+    done
+
+    # select the dataset
+    if [[ ${zlist} ]]; then
+        DIALOG " $_zfsSetMenuTitle " --menu "\n$_zfsSetMenuBody\n " 0 0 12 ${zlist} 2>${ANSWER} || return 0
+        local zdataset=$(cat ${ANSWER})
+    else
+        # no available datasets
+        DIALOG " $_zfsSetMenuTitle " --infobox "\n$_zfsDatasetNotFound\n " 0 0
+        sleep 3
+        return 0
+    fi
+    
+    # get property/value input
+    local -i loopmenu=1
+    zfsmenubody=$_zfsSetMenuBody
+    local zsetstmt
+    while ((loopmenu)); do
+        DIALOG " $_zfsSetMenuTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 0
+        zsetstmt=$(cat ${ANSWER})
+
+        # validation
+        [[ ! $zsetstmt =~ ^[a-zA-Z@]*=[a-zA-Z0-9@-]*$ ]] && zfsmenubody=$_zfsMountMenuNotValid || loopmenu=0
+    done
+
+    #set the property
+    zfs set ${zsetstmt} ${zdataset} 2>$ERR
+    check_for_error "zfs set ${zsetstmt} on ${zdataset}"
+}
+
 zfs_menu_manual() {
     local -i loopmenu=1
     while ((loopmenu)); do
-        DIALOG " $_zfsManualMenuTitle " --menu "\n$_zfsManualMenuBody\n " 22 60 7 \
+        DIALOG " $_zfsManualMenuTitle " --menu "\n$_zfsManualMenuBody\n " 22 60 8 \
           "$_zfsManualMenuOptCreate" "" \
           "$_zfsManualMenuOptImport" "" \
           "$_zfsManualMenuOptNewFile" "" \
           "$_zfsManualMenuOptNewLegacy" "" \
           "$_zfsManualMenuOptNewZvol" "" \
+          "$_zfsManualMenuOptSet" "" \
           "$_zfsManualMenuOptDestroy" "" \
           "$_Back" "" 2>${ANSWER}
 
@@ -1139,6 +1179,8 @@ zfs_menu_manual() {
             "$_zfsManualMenuOptNewLegacy") zfs_new_ds "legacy"
                ;;
             "$_zfsManualMenuOptNewZvol") zfs_new_ds "zvol"
+               ;;
+            "$_zfsManualMenuOptSet") zfs_set_property
                ;;
             "$_zfsManualMenuOptDestroy") zfs_destroy_dataset
                ;;

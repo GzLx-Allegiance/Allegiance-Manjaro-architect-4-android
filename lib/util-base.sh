@@ -63,8 +63,8 @@ enable_services() {
                 sleep 2
             fi
 
-            # if we are using a zfs root we should enable the zfs services
-            if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+            # if we are using a zfs we should enable the zfs services
+            if [ $ZFS == 1 ]; then
                 arch_chroot "systemctl enable zfs.target" 2>$ERR
                 check_for_error "enable zfs.target" "$?"
                 arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
@@ -305,7 +305,7 @@ install_base() {
 
 
     # if we are using a zfs root we should enable the zfs services
-    if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+    if [ $ZFS == 1 ]; then
         arch_chroot "systemctl enable zfs.target" 2>$ERR
         check_for_error "enable zfs.target" "$?"
         arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
@@ -315,7 +315,7 @@ install_base() {
         arch_chroot "systemctl enable zfs-import.target" 2>$ERR
         check_for_error "enable zfs-import.target" "$?"
         # we also need create the cachefile
-        zpool set cachefile=/etc/zfs/zpool.cache zpmain 2>$ERR
+        zpool set cachefile=/etc/zfs/zpool.cache $(findmnt ${MOUNTPOINT} -lno SOURCE | awk -F / '{print $1}') 2>$ERR
         check_for_error "create zpool cache" "$?"
         cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
         check_for_error "copy cache file" "$?"
@@ -407,15 +407,13 @@ install_grub_uefi() {
         # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
         echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
         export ZPOOL_VDEV_NAME_PATH=YES
-        # temporary - we can remove this once we add support for mounting zfs
-        UEFI_MOUNT=/boot/efi
         # there has to be a better way to do this
         echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
         echo -e "# "'!'"/bin/bash\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
 
-    chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
 
     # if the device is removable append removable to the grub-install
     if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
@@ -427,7 +425,7 @@ install_grub_uefi() {
     check_for_error "grub-install --target=x86_64-efi" $?
 
     # the grub_installer is no longer needed - there still needs to be a better way to do this
-    rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
         
     # If root is on btrfs volume, amend grub
     [[ -e /tmp/.btrfsroot ]] && \
@@ -448,8 +446,8 @@ install_grub_uefi() {
     fi
 
 }
-install_refind()
 
+install_refind()
 {
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_InstRefindBody\n " 0 0 || return 0
     clear
@@ -516,9 +514,6 @@ install_refind()
 install_systemd_boot() {
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_InstSystdBBody\n " 0 0 || return 0
     clear
-
-    # temporary - we can remove this once we add support for mounting zfs
-    UEFI_MOUNT=/boot
 
     # Check if already installed. If so, just add entries
     if $(arch_chroot "bootctl status" 2>&1 >/dev/null | grep -q "systemd-boot not installed"); then
@@ -636,7 +631,7 @@ bios_bootloader() {
                     echo -e "# "'!'"/bin/bash\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
-                chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
              
                 DIALOG " $_InstGrub " --infobox "\n$_PlsWaitBody\n " 0 0
                 dd if=/dev/zero of=$DEVICE seek=1 count=2047
@@ -644,7 +639,7 @@ bios_bootloader() {
                 check_for_error "grub-install --target=i386-pc" $?
 
                 # the grub_installer is no longer needed - there still needs to be a better way to do this
-                rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
 
                 #grub_mkconfig
 
