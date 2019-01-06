@@ -91,6 +91,21 @@ VB_MOD=""        # headers packages to install depending on kernel(s)
 SHOW_ONCE=0      # Show de_wm information only once
 COPY_PACCONF=0   # Copy over installer /etc/pacman.conf to installed system?
 
+GRAPHIC_CARD=$(lspci | grep -i "vga" | sed 's/.*://' | sed 's/(.*//' | sed 's/^[ \t]*//')
+    # Set microcode based on hardware. Extra work is needed for NVIDIA
+    if  [[ $(echo $GRAPHIC_CARD | grep -i "nvidia") != "" ]]; then
+        MODULE="nouveau"
+        # If NVIDIA, first need to know the integrated GC
+        [[ $(lscpu | grep -i "intel\|lenovo") != "" ]] && MCODE=intel    
+    # All non-NVIDIA cards / virtualisation
+    elif [[ $(echo $GRAPHIC_CARD | grep -i 'intel\|lenovo') != "" ]]; then MCODE=intel
+        MODULE="i915"
+    elif [[ $(echo $GRAPHIC_CARD | grep -i 'ati') != "" ]]; then MCODE=amd
+        MODULE="amdgpu radeon"
+    elif [[ $(echo $GRAPHIC_CARD | grep -i 'virtualbox') != "" ]]; then HIGHLIGHT_SUB_GC=8
+    else MCODE="all"
+    fi
+
 import(){
     if [[ -r $1 ]];then
         source $1
