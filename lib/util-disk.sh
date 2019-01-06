@@ -256,7 +256,7 @@ select_filesystem() {
             ;;
         "btrfs") FILESYSTEM="mkfs.btrfs -f"
             CHK_NUM=16
-            fs_opts="autodefrag compress=zlib compress=lzo compress=no compress-force=zlib compress-force=lzo discard \
+            fs_opts="autodefrag compress=zlib compress=lzo compress=zstd compress=no compress-force=zlib compress-force=lzo compress-force=zstd discard \
             noacl noatime nodatasum nospace_cache recovery skip_balance space_cache nossd ssd ssd_spread commit=120"
             modprobe btrfs
             ;;
