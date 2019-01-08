@@ -64,6 +64,8 @@ VG_PARTS=""
 LVM_SEP_BOOT=0      # 1 = Seperate /boot, 2 = seperate /boot & LVM
 LV_SIZE_INVALID=0   # Is LVM LV size entered valid?
 VG_SIZE_TYPE=""     # Is VG in Gigabytes or Megabytes?
+ZFS=0
+ZFS_ZPOOL_NAME=""
 
 # Mounting
 MOUNT=""                        # Installation: All other mounts branching
@@ -482,7 +484,7 @@ arch_chroot() {
 
 # Ensure that a partition is mounted
 check_mount() {
-    if [[ $(findmnt --list -o TARGET | grep ${MOUNTPOINT}) == "" ]]; then
+    if [[ $(findmnt -nl ${MOUNTPOINT}) == "" ]]; then
         DIALOG " $_ErrTitle " --msgbox "\n$_ErrNoMount\n " 0 0
         ANSWER=0
         HIGHLIGHT=0

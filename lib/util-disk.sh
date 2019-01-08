@@ -130,8 +130,9 @@ auto_partition() {
 find_partitions() {
     PARTITIONS=""
     NUMBER_PARTITIONS=0
+    # get the list of partitions and also include the zvols since it is common to mount filesystems directly on them.  It should be safe to include them here since they present as block devices.
     partition_list=$(lsblk -lno NAME,SIZE,TYPE | grep $INCLUDE_PART | sed 's/part$/\/dev\//g' | sed 's/lvm$\|crypt$/\/dev\/mapper\//g' | \
-    awk '{print $3$1 " " $2}' | awk '!/mapper/{a[++i]=$0;next}1;END{while(x<length(a))print a[++x]}')
+    awk '{print $3$1 " " $2}' | awk '!/mapper/{a[++i]=$0;next}1;END{while(x<length(a))print a[++x]}' ; zfs list -Ht volume -o name,volsize 2>/dev/null | awk '{printf "/dev/zvol/%s %s\n", $1, $2}')
 
     for i in ${partition_list}; do
         PARTITIONS="${PARTITIONS} ${i}"
@@ -234,6 +235,9 @@ select_filesystem() {
     # prep variables
     fs_opts=""
     CHK_NUM=0
+
+    # zfs legacy filesystems can't be formatted, always have a zfs filesystem and store their mount options in metadata
+    [[ $(zfs_list_datasets legacy | grep "^${PARTITION}$") ]] && return
 
     DIALOG " $_FSTitle " --menu "\n$_FSBody\n " 0 0 10 \
       "$_FSSkip" "-" \
@@ -356,8 +360,11 @@ mount_current_partition() {
     # Get mounting options for appropriate filesystems
     [[ $fs_opts != "" ]] && mount_opts
 
-    # Use special mounting options if selected, else standard mount
-    if [[ $(cat ${MOUNT_OPTS}) != "" ]]; then
+    # Check for zfs, use special mounting options if selected, else standard mount
+    if [[ $(zfs_list_datasets legacy | grep "^${PARTITION}$") ]]; then
+        check_for_error "mount ${PARTITION}"
+        mount -t zfs ${PARTITION} ${MOUNTPOINT}${MOUNT} 2>>$LOGFILE
+    elif [[ $(cat ${MOUNT_OPTS}) != "" ]]; then
         check_for_error "mount ${PARTITION} $(cat ${MOUNT_OPTS})"
         mount -o $(cat ${MOUNT_OPTS}) ${PARTITION} ${MOUNTPOINT}${MOUNT} 2>>$LOGFILE
     else
@@ -881,6 +888,338 @@ lvm_del_all() {
     fi
 }
 
+# returns a list of devices containing zfs members
+zfs_list_devs() {
+    zpool status -PL 2>/dev/null | awk '{print $1}' | grep "^/"
+}
+
+zfs_list_datasets() {
+    case $1 in
+        "zvol")
+            zfs list -Ht volume -o name,volsize 2>/dev/null
+            ;;
+        "legacy")
+            zfs list -Ht filesystem -o name,mountpoint 2>/dev/null | grep "^.*/.*legacy$" | awk '{print $1}'
+            ;;
+        *)
+            zfs list -H -o name 2>/dev/null | grep "/"
+    esac
+}
+
+# creates a new zpool on an existing partition
+zfs_create_zpool() {
+    # LVM Detection. If detected, activate.
+    lvm_detect
+
+    INCLUDE_PART='part\|lvm\|crypt'
+    umount_partitions
+    find_partitions
+
+    list_mounted > /tmp/.ignore_part
+    zfs_list_devs >> /tmp/.ignore_part
+    list_containing_crypt >> /tmp/.ignore_part
+    check_for_error "ignore crypted: $(list_containing_crypt)"
+
+    for part in $(cat /tmp/.ignore_part); do
+        delete_partition_in_list $part
+    done
+
+    # Identify the partition for the zpool
+    DIALOG " $_zfsZpoolPartMenuTitle " --menu "\n$_zfsZpoolPartMenuBody\n " 0 0 12 ${PARTITIONS} 2>${ANSWER} || return 1
+    PARTITION=$(cat ${ANSWER})
+
+    # We need to get a name for the zpool
+    local -i loopmenu=1
+    ZFSMENUTEXT=$_zfsZpoolCBody
+    while ((loopmenu)); do
+        DIALOG " $_zfsZpoolCTitle " --inputbox "\n$ZFSMENUTEXT\n " 0 0 "zpmanjaro" 2>${ANSWER} || return 1
+        ZFSMENUTEXT=$_zfsZpoolCBody
+
+        # validation
+        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:_-]*$ ]] && ZFSMENUTEXT=$_zfsZpoolCValidation1
+        [[ $(cat ${ANSWER}) =~ ^(log|mirror|raidz|raidz1|raidz2|raidz3|spare).*$ ]] && ZFSMENUTEXT=$_zfsZpoolCValidation2
+
+        [[ $ZFSMENUTEXT == $_zfsZpoolCBody ]] && loopmenu=0
+    done
+    ZFS_ZPOOL_NAME=$(cat ${ANSWER})
+
+    # Find the UUID of the partition
+    PARTUUID=$(lsblk -lno PATH,PARTUUID | grep "^${PARTITION}" | awk '{print $2}')
+
+    # Create the zpool
+    zpool create -m none ${ZFS_ZPOOL_NAME} ${PARTUUID} 2>$ERR
+    check_for_error "Creating zpool ${ZFS_ZPOOL_NAME} on device ${PARTITION} using partuuid ${PARTUUID}"
+
+    ZFS=1
+
+    # Since zfs manages mountpoints, we export it and then import with a root of $MOUNTPOINT
+    zpool export ${ZFS_ZPOOL_NAME} 2>$ERR
+    zpool import -R ${MOUNTPOINT} ${ZFS_ZPOOL_NAME} 2>>$ERR
+    check_for_error "Export and importing ${ZFS_POOL_NAME}"
+
+    return 0
+}
+
+# Creates a zfs filesystem, the first parameter is the ZFS path and the second is the mount path
+zfs_create_dataset() {
+    local zpath=$1
+    local zmount=$2
+
+    zfs create -o mountpoint=$zmount $zpath 2>$ERR
+    check_for_error "Creating zfs dataset ${zpath} with mountpoint ${zmount}"
+}
+
+# Automated configuration of zfs.  Creates a new zpool and a default set of filesystems
+zfs_auto() {
+    # first we need to create a zpool to hold the datasets/zvols
+    zfs_create_zpool
+    if [ $? != 0 ]; then
+        DIALOG " $_zfsZpoolCTitle " --infobox "\n$_zfsCancelled\n " 0 0
+        sleep 3
+        return 0
+    fi
+
+    # next create the datasets including their parents
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/data" "none" 
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/ROOT" "none" 
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/ROOT/manjaro" "none"
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/ROOT/manjaro/root" "/"
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/data/home" "/home"
+    zfs_create_dataset "${ZFS_ZPOOL_NAME}/ROOT/manjaro/paccache" "/var/cache/pacman"
+
+    # set the rootfs
+    zpool set bootfs=${ZFS_ZPOOL_NAME}/ROOT/manjaro/root ${ZFS_ZPOOL_NAME} 2>$ERR
+    check_for_error "Setting zfs bootfs"
+    
+    # provide confirmation to the user
+    DIALOG " $_zfsZpoolCTitle " --infobox "\n$_zfsAutoComplete\n " 0 0
+    sleep 3
+}
+
+zfs_import_pool() {
+    local zplist
+
+    local zpoolitem
+    for zpoolitem in $(zpool import 2>/dev/null | grep "^[[:space:]]*pool" | awk -F : '{print $2}' | awk '{$1=$1};1'); do
+        zplist="${zplist} ${zpoolitem} -"
+    done
+
+    if [[ ${zplist} ]]; then
+        DIALOG " $_zfsZpoolImportMenuTitle " --menu "\n$_zfsZpoolImportMenuBody\n " 0 0 12 ${zplist} 2>${ANSWER} || return 0
+        zpool import -R ${MOUNTPOINT} $(cat ${ANSWER}) 2>$ERR
+        check_for_error "Import zpool $(cat ${ANSWER})"
+        ZFS=1
+    else
+        DIALOG " $_zfsZpoolImportMenuTitle " --infobox "\n$_zfsZpoolNoPool\n " 0 0
+        sleep 3
+    fi
+}
+
+# return a list of imported zpools
+zfs_list_pools() {
+    zpool list -H 2>/dev/null | awk '{print $1}' 
+}
+
+zfs_new_ds() {
+    local zplist
+    local zmount=$1
+    local zpoolitem
+
+    for zpoolitem in `zfs_list_pools`; do
+        zplist="${zplist} ${zpoolitem} -"
+    done
+
+
+    if [[ ${zplist} ]]; then
+        # select a zpool
+        DIALOG " $_zfsSelectZpoolMenuTitle " --menu "\n$_zfsSelectZpoolMenuBody\n " 0 0 12 ${zplist} 2>${ANSWER} || return 0
+        local zpool=$(cat ${ANSWER})
+    else
+        # no imported zpools
+        DIALOG " $_zfsSelectZpoolMenuTitle " --infobox "\n$_zfsZpoolNoPool\n " 0 0
+        sleep 3
+        return 0
+    fi
+
+    # enter a name for the dataset
+    local -i loopmenu=1
+    local zfsmenubody=$_zfsDSMenuNameBody
+    while ((loopmenu)); do
+        DIALOG " $_zfsDSMenuNameTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 1
+
+        # validation
+        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:_-]*$ ]] && zfsmenubody=$_zfsZpoolCValidation1 || loopmenu=0
+    done
+    local zname=$(cat ${ANSWER})
+
+    case $zmount in
+        "legacy")
+            zfs_create_dataset ${zpool}/${zname} ${zmount} 2>$ERR
+            ;;
+        "zvol")
+            # get the size of the zvol
+            loopmenu=1
+            zfsmenubody=$_zfsZvolSizeMenuBody
+            while ((loopmenu)); do
+                DIALOG " $_zfsZvolSizeMenuTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 1
+
+                # validation
+                [[ $(cat ${ANSWER}) =~ ^[0-9]*$ ]] && loopmenu=0 || zfsmenubody=$_zfsZvolSizeMenuValidation
+            done
+            local zsize=$(cat ${ANSWER})
+
+            zfs create -V ${zsize}M ${zpool}/${zname} 2>$ERR
+            ;;
+        *)
+            # select a mount point
+            loopmenu=1
+            zfsmenubody=$_zfsMountMenuBody
+            while ((loopmenu)); do
+                DIALOG " $_zfsMountMenuTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 0
+                zmount=$(cat ${ANSWER})
+                zfsmenubody=$_zfsMountMenuBody
+
+                # validation
+                [[ $(findmnt -n ${MOUNTPOINT}/${zmount}) ]] && zfsmenubody=$_zfsMountMenuInUse
+                [[ ! $zmount =~ ^/ ]] && zfsmenubody=$_zfsMountMenuNotValid
+
+                [[ $zfsmenubody == $_zfsMountMenuBody ]] && loopmenu=0
+            done
+            zfs_create_dataset ${zpool}/${zname} ${zmount} 2>$ERR
+            ;;
+    esac
+    check_for_error "new zfs dataset ${zpool}/${zname} on ${zmount}"
+}
+
+zfs_destroy_dataset() {
+    local zlist
+
+    # get dataset list and format for the menu
+    local zds
+    for zds in $(zfs_list_datasets); do
+        zlist="${zlist} ${zds} -"
+    done
+
+    # select the dataset to destroy
+    if [[ ${zlist} ]]; then
+        DIALOG " $_zfsDestroyMenuTitle " --menu "\n$_zfsDestroyMenuBody\n " 0 0 12 ${zlist} 2>${ANSWER} || return 0
+        local zdataset=$(cat ${ANSWER})
+    else
+        # no available datasets
+        DIALOG " $_zfsDestroyMenuTitle " --infobox "\n$_zfsDatasetNotFound\n " 0 0
+        sleep 3
+        return 0
+    fi
+    
+    # better confirm this one
+    DIALOG --defaultno --yesno "$_zfsDestroyMenuConfirm1 ${zdataset} $_zfsDestroyMenuConfirm2" 0 0
+    if [ $? ]; then
+        zfs destroy -r ${zdataset}
+        check_for_error "zfs destroy ${zdataset}"
+    fi
+}
+
+zfs_set_property () {
+   local zlist
+
+    # get dataset list and format for the menu
+    local zds
+    for zds in $(zfs_list_datasets); do
+        zlist="${zlist} ${zds} -"
+    done
+
+    # select the dataset
+    if [[ ${zlist} ]]; then
+        DIALOG " $_zfsSetMenuTitle " --menu "\n$_zfsSetMenuBody\n " 0 0 12 ${zlist} 2>${ANSWER} || return 0
+        local zdataset=$(cat ${ANSWER})
+    else
+        # no available datasets
+        DIALOG " $_zfsSetMenuTitle " --infobox "\n$_zfsDatasetNotFound\n " 0 0
+        sleep 3
+        return 0
+    fi
+    
+    # get property/value input
+    local -i loopmenu=1
+    zfsmenubody=$_zfsSetMenuBody
+    local zsetstmt
+    while ((loopmenu)); do
+        DIALOG " $_zfsSetMenuTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 0
+        zsetstmt=$(cat ${ANSWER})
+
+        # validation
+        [[ ! $zsetstmt =~ ^[a-zA-Z@]*=[a-zA-Z0-9@-]*$ ]] && zfsmenubody=$_zfsMountMenuNotValid || loopmenu=0
+    done
+
+    #set the property
+    zfs set ${zsetstmt} ${zdataset} 2>$ERR
+    check_for_error "zfs set ${zsetstmt} on ${zdataset}"
+}
+
+zfs_menu_manual() {
+    local -i loopmenu=1
+    while ((loopmenu)); do
+        DIALOG " $_zfsManualMenuTitle " --menu "\n$_zfsManualMenuBody\n " 22 60 8 \
+          "$_zfsManualMenuOptCreate" "" \
+          "$_zfsManualMenuOptImport" "" \
+          "$_zfsManualMenuOptNewFile" "" \
+          "$_zfsManualMenuOptNewLegacy" "" \
+          "$_zfsManualMenuOptNewZvol" "" \
+          "$_zfsManualMenuOptSet" "" \
+          "$_zfsManualMenuOptDestroy" "" \
+          "$_Back" "" 2>${ANSWER}
+
+        case $(cat ${ANSWER}) in
+            "$_zfsManualMenuOptCreate") zfs_create_zpool
+               ;;
+            "$_zfsManualMenuOptImport") zfs_import_pool
+               ;;
+            "$_zfsManualMenuOptNewFile") zfs_new_ds
+               ;;
+            "$_zfsManualMenuOptNewLegacy") zfs_new_ds "legacy"
+               ;;
+            "$_zfsManualMenuOptNewZvol") zfs_new_ds "zvol"
+               ;;
+            "$_zfsManualMenuOptSet") zfs_set_property
+               ;;
+            "$_zfsManualMenuOptDestroy") zfs_destroy_dataset
+               ;;
+            *) loopmenu=0
+               return 0
+               ;;
+        esac
+    done
+}
+
+# The main ZFS menu
+zfs_menu() {
+    # check for zfs support
+    modprobe zfs 2>$ERR
+    if [[ $(cat $ERR) ]]; then
+        DIALOG " $_zfsZpoolCTitle " --infobox "\n$_zfsNotSupported\n " 0 0
+        sleep 3
+        return 0
+    fi
+
+    declare -i loopmenu=1
+    while ((loopmenu)); do
+        DIALOG " $_PrepZFS " --menu "\n$_zfsMainMenuBody\n " 22 60 3 \
+          "$_zfsMainMenuOptAutomatic" "" \
+          "$_zfsMainMenuOptManual" "" \
+          "$_Back" "" 2>${ANSWER}
+
+        case $(cat ${ANSWER}) in
+            "$_zfsMainMenuOptAutomatic") zfs_auto
+               ;;
+            "$_zfsMainMenuOptManual") zfs_menu_manual
+               ;;
+            *) loopmenu=0
+               return 0
+               ;;
+        esac
+    done
+}
+
 make_esp() {
     # Extra Step for VFAT UEFI Partition. This cannot be in an LVM container.
     if [[ $SYSTEM == "UEFI" ]]; then
@@ -922,6 +1261,7 @@ make_esp() {
         fi
     fi
 }
+
 mount_partitions() {
     # Warn users that they CAN mount partitions without formatting them!
     DIALOG " $_PrepMntPart " --msgbox "\n$_WarnMount1 '$_FSSkip' $_WarnMount2\n " 15 65
@@ -929,12 +1269,26 @@ mount_partitions() {
     # LVM Detection. If detected, activate.
     lvm_detect
 
-    # Ensure partitions are unmounted (i.e. where mounted previously), and then list available partitions
+    # Ensure partitions are unmounted (i.e. where mounted previously)
     INCLUDE_PART='part\|lvm\|crypt'
     umount_partitions
+
+    # We need to remount the zfs filesystems that have defined mountpoints already
+    zfs mount -aO 2>/dev/null
+
+    # Get list of available partitions
     find_partitions
-    # Filter out partitions that have already been mounted and partitions that just contain crypt device
+
+    # Add legacy zfs filesystems to the list - these can be mounted but not formatted
+    for i in $(zfs_list_datasets "legacy"); do
+        PARTITIONS="${PARTITIONS} ${i}"
+        PARTITIONS="${PARTITIONS} zfs"
+        NUMBER_PARTITIONS=$(( NUMBER_PARTITIONS + 1 ))
+    done
+
+    # Filter out partitions that have already been mounted and partitions that just contain crypt or zfs devices
     list_mounted > /tmp/.ignore_part
+    zfs_list_devs >> /tmp/.ignore_part
     list_containing_crypt >> /tmp/.ignore_part
     check_for_error "ignore crypted: $(list_containing_crypt)"
 
@@ -942,37 +1296,61 @@ mount_partitions() {
         delete_partition_in_list $part
     done
 
-    # Identify and mount root
-    DIALOG " $_PrepMntPart " --menu "\n$_SelRootBody\n " 0 0 12 ${PARTITIONS} 2>${ANSWER} || return 0
-    PARTITION=$(cat ${ANSWER})
-    ROOT_PART=${PARTITION}
-    echo ${ROOT_PART} > /tmp/.root_partitioni
-    echo ${ROOT_PART} > /tmp/.root_partition
-    # Format with FS (or skip) -> # Make the directory and mount. Also identify LUKS and/or LVM
-    select_filesystem && mount_current_partition || return 0
+    # check to see if we already have a zfs root mounted
+    if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+        DIALOG " $_PrepMntPart " --infobox "\n$_zfsFoundRoot\n " 0 0
+        sleep 3
+    else
+        # Identify and mount root
+        DIALOG " $_PrepMntPart " --menu "\n$_SelRootBody\n " 0 0 12 ${PARTITIONS} 2>${ANSWER} || return 0
+        PARTITION=$(cat ${ANSWER})
+        ROOT_PART=${PARTITION}
+        echo ${ROOT_PART} > /tmp/.root_partitioni
+        echo ${ROOT_PART} > /tmp/.root_partition
+        # Format with FS (or skip) -> # Make the directory and mount. Also identify LUKS and/or LVM
+        select_filesystem && mount_current_partition || return 0
 
-    ini mount.root "${PARTITION}"
-    delete_partition_in_list "${ROOT_PART}"
+        ini mount.root "${PARTITION}"
+        delete_partition_in_list "${ROOT_PART}"
 
-    # Extra check if root is on LUKS or lvm
-    get_cryptroot
-    echo "$LUKS_DEV" > /tmp/.luks_dev
-    # If the root partition is btrfs, offer to create subvolumus
-    if [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]]; then
-        # Check if there are subvolumes already on the btrfs partition
-        if [[ $(btrfs subvolume list /mnt | wc -l) -gt 1 ]] && DIALOG " The volume has already subvolumes " --yesno "\nFound subvolumes $(btrfs subvolume list /mnt | cut -d" " -f9)\n\nWould you like to mount them? \n " 0 0; then
-            # Pre-existing subvolumes and user wants to mount them
-            mount_existing_subvols
-        else
-            # No subvolumes present. Make some new ones
-            DIALOG " Your root volume is formatted in btrfs " --yesno "\nWould you like to create subvolumes in it? \n " 0 0 && btrfs_subvolumes && touch /tmp/.btrfsroot
-        fi
-    else 
-        [[ -e /tmp/.btrfsroot ]] && rm /tmp/.btrfsroot
-    fi    
+        # Extra check if root is on LUKS or lvm
+        get_cryptroot
+        echo "$LUKS_DEV" > /tmp/.luks_dev
+        # If the root partition is btrfs, offer to create subvolumus
+        if [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]]; then
+            # Check if there are subvolumes already on the btrfs partition
+            if [[ $(btrfs subvolume list /mnt | wc -l) -gt 1 ]] && DIALOG " The volume has already subvolumes " --yesno "\nFound subvolumes $(btrfs subvolume list /mnt | cut -d" " -f9)\n\nWould you like to mount them? \n " 0 0; then
+                # Pre-existing subvolumes and user wants to mount them
+                mount_existing_subvols
+            else
+                # No subvolumes present. Make some new ones
+                DIALOG " Your root volume is formatted in btrfs " --yesno "\nWould you like to create subvolumes in it? \n " 0 0 && btrfs_subvolumes && touch /tmp/.btrfsroot
+            fi
+        else 
+            [[ -e /tmp/.btrfsroot ]] && rm /tmp/.btrfsroot
+        fi    
+    fi
+
+    # We need to remove legacy zfs partitions before make_swap since they can't hold swap
+    local zlegacy
+    for zlegacy in $(zfs_list_datasets "legacy"); do
+        delete_partition_in_list ${zlegacy}
+    done
 
     # Identify and create swap, if applicable
     make_swap
+
+    # Now that swap is done we put the legacy partitions back, unless they are already mounted
+    for i in $(zfs_list_datasets "legacy"); do
+        PARTITIONS="${PARTITIONS} ${i}"
+        PARTITIONS="${PARTITIONS} zfs"
+        NUMBER_PARTITIONS=$(( NUMBER_PARTITIONS + 1 ))
+    done
+
+    for part in $(list_mounted); do
+        delete_partition_in_list $part
+    done
+
 
     # All other partitions
     while [[ $NUMBER_PARTITIONS > 0 ]]; do
@@ -1097,6 +1475,7 @@ get_cryptboot(){
     fi
 
 }
+
 btrfs_subvolumes() {
     #1) save mount options and name of the root partition 
     mount | grep "on /mnt " | grep -Po '(?<=\().*(?=\))' > /tmp/.root_mount_options
