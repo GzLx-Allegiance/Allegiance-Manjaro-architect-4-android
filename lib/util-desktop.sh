@@ -277,6 +277,9 @@ install_desktop() {
         fi
     done
 
+    local zfs_is_checked
+    [[ $ZFS == 1 ]] && zfs_is_checked="on" || zfs_is_checked="off"
+
     # Choose wanted kernel modules
     DIALOG " $_ChsAddPkgs " --checklist "\n$_UseSpaceBar\n " 0 0 12 \
       "KERNEL-headers" "-" off \
@@ -289,8 +292,8 @@ install_desktop() {
       "KERNEL-vhba-module" "-" off \
       "KERNEL-virtualbox-guest-modules" "-" off \
       "KERNEL-virtualbox-host-modules" "-" off \
-      "KERNEL-spl" "-" off \
-      "KERNEL-zfs" "-" off 2>/tmp/.modules || return 0
+      "KERNEL-spl" "-" $zfs_is_checked \
+      "KERNEL-zfs" "-" $zfs_is_checked 2>/tmp/.modules || return 0
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
@@ -329,21 +332,29 @@ install_desktop() {
     # copy keymap and consolefont settings to target
         echo -e "KEYMAP=$(ini linux.keymap)\nFONT=$(ini linux.font)" > ${MOUNTPOINT}/etc/vconsole.conf
         check_for_error "configure vconsole"
- 
-    # If root is on btrfs volume, amend mkinitcpio.conf
-    if [[ -e /tmp/.btrfsroot ]]; then
-        BTRFS_ROOT=1
-        sed -e '/^HOOKS=/s/\ fsck//g' -e '/^MODULES=/s/"$/ btrfs"/g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
-        check_for_error "root on btrfs volume. Amend mkinitcpio."
-        # Adjust tlp settings to avoid filesystem corruption
-        if [[ -e /mnt/etc/default/tlp ]]; then
-            sed -i 's/SATA_LINKPWR_ON_BAT.*/SATA_LINKPWR_ON_BAT=max_performance/' /mnt/etc/default/tlp
-        fi
-    fi
 
-    # If root is on nilfs2 volume, amend mkinitcpio.conf
-    [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == nilfs2 ]] && sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf && \
-      check_for_error "root on nilfs2 volume. Amend mkinitcpio."
+    # mkinitcpio handling for specific filesystems
+    case $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) in
+        btrfs)  
+            BTRFS_ROOT=1
+            sed -e '/^HOOKS=/s/\ fsck//g' -e '/^MODULES=/s/"$/ btrfs"/g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on btrfs volume. Amend mkinitcpio."
+            # Adjust tlp settings to avoid filesystem corruption
+            if [[ -e /mnt/etc/default/tlp ]]; then
+                sed -i 's/SATA_LINKPWR_ON_BAT.*/SATA_LINKPWR_ON_BAT=max_performance/' /mnt/etc/default/tlp
+            fi
+            ;;
+        nilfs2)
+            sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on nilfs2 volume. Amend mkinitcpio."
+            ;;
+        zfs)
+            ZFS_ROOT=1
+            # the order is important here so strip out what we want changed and put it back in the correct order
+            sed -e '/^HOOKS=/s/\ filesystems//g' -e '/^HOOKS=/s/\ keyboard/\ keyboard\ zfs\ filesystems/g' -e '/^HOOKS=/s/\ fsck//g' -e '/^FILES=/c\FILES=("/usr/lib/libgcc_s.so.1")' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on zfs volume. Amend mkinitcpio."
+            ;;
+    esac
 
     recheck_luks
     
@@ -352,7 +363,7 @@ install_desktop() {
     ([[ $LVM -eq 0 ]] && [[ $LUKS -eq 1 ]]) && { sed -i 's/block filesystems keyboard/block consolefont keymap keyboard encrypt filesystems/g' ${MOUNTPOINT}/etc/mkinitcpio.conf 2>$ERR; check_for_error "add luks hook" $?; }
     [[ $((LVM + LUKS)) -eq 2 ]] && { sed -i 's/block filesystems keyboard/block consolefont keymap keyboard encrypt lvm2 filesystems/g' ${MOUNTPOINT}/etc/mkinitcpio.conf 2>$ERR; check_for_error "add lvm/luks hooks" $?; }
 
-    [[ $((LVM + LUKS + BTRFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
+    [[ $((LVM + LUKS + BTRFS_ROOT + ZFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
 
     # If specified, copy over the pacman.conf file to the installation
     if [[ $COPY_PACCONF -eq 1 ]]; then

@@ -62,6 +62,23 @@ enable_services() {
                 echo "no display manager was installed"
                 sleep 2
             fi
+
+            # if we are using a zfs we should enable the zfs services
+            if [ $ZFS == 1 ]; then
+                arch_chroot "systemctl enable zfs.target" 2>$ERR
+                check_for_error "enable zfs.target" "$?"
+                arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
+                check_for_error "enable zfs-import-cache" "$?"
+                arch_chroot "systemctl enable zfs-mount" 2>$ERR
+                check_for_error "enable zfs-mount" "$?"
+                arch_chroot "systemctl enable zfs-import.target" 2>$ERR
+                check_for_error "enable zfs-import.target" "$?"
+                # we also need create the cachefile
+                zpool set cachefile=/etc/zfs/zpool.cache $(findmnt ${MOUNTPOINT} -lno SOURCE | awk -F / '{print $1}') 2>$ERR
+                check_for_error "create zpool cache" "$?"
+                cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
+                check_for_error "copy cache file" "$?"
+            fi
 }
 
 install_extra() {
@@ -213,6 +230,9 @@ install_base() {
         fi
     done
 
+    local zfs_is_checked
+    [[ $ZFS == 1 ]] && zfs_is_checked="on" || zfs_is_checked="off"
+
     # Choose wanted kernel modules
     DIALOG " $_ChsAddPkgs " --checklist "\n$_UseSpaceBar\n " 0 0 12 \
       "KERNEL-headers" "-" off \
@@ -225,8 +245,8 @@ install_base() {
       "KERNEL-vhba-module" "-" off \
       "KERNEL-virtualbox-guest-modules" "-" off \
       "KERNEL-virtualbox-host-modules" "-" off \
-      "KERNEL-spl" "-" off \
-      "KERNEL-zfs" "-" off 2>/tmp/.modules || return 0
+      "KERNEL-spl" "-" $zfs_is_checked \
+      "KERNEL-zfs" "-" $zfs_is_checked 2>/tmp/.modules || return 0
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
@@ -258,16 +278,24 @@ install_base() {
     echo -e "KEYMAP=$(ini linux.keymap)\nFONT=$(ini linux.font)" > ${MOUNTPOINT}/etc/vconsole.conf
     check_for_error "configure vconsole"
     
-    # If root is on btrfs volume, amend mkinitcpio.conf
-    if [[ -e /tmp/.btrfsroot ]]; then
-        BTRFS_ROOT=1
-        sed -e '/^HOOKS=/s/\ fsck//g' -e '/^MODULES=/s/"$/ btrfs"/g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
-        check_for_error "root on btrfs volume. Amend mkinitcpio."
-    fi
-
-    # If root is on nilfs2 volume, amend mkinitcpio.conf
-    [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == nilfs2 ]] && sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf && \
-      check_for_error "root on nilfs2 volume. Amend mkinitcpio."
+    # mkinitcpio handling for specific filesystems
+    case $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) in
+        btrfs)  
+            BTRFS_ROOT=1
+            sed -e '/^HOOKS=/s/\ fsck//g' -e '/^MODULES=/s/"$/ btrfs"/g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on btrfs volume. Amend mkinitcpio."
+            ;;
+        nilfs2)
+            sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on nilfs2 volume. Amend mkinitcpio."
+            ;;
+        zfs)
+            ZFS_ROOT=1
+            # the order is important here so strip out what we want changed and put it back in the correct order
+            sed -e '/^HOOKS=/s/\ filesystems//g' -e '/^HOOKS=/s/\ keyboard/\ keyboard\ zfs\ filesystems/g' -e '/^HOOKS=/s/\ fsck//g' -e '/^FILES=/c\FILES=("/usr/lib/libgcc_s.so.1")' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+            check_for_error "root on zfs volume. Amend mkinitcpio."
+            ;;
+    esac
 
     recheck_luks
 
@@ -276,7 +304,25 @@ install_base() {
     ([[ $LVM -eq 0 ]] && [[ $LUKS -eq 1 ]]) && { sed -i 's/block filesystems keyboard/block consolefont keymap keyboard encrypt filesystems/g' ${MOUNTPOINT}/etc/mkinitcpio.conf 2>$ERR; check_for_error "add luks hook" $?; }
     [[ $((LVM + LUKS)) -eq 2 ]] && { sed -i 's/block filesystems keyboard/block consolefont keymap keyboard encrypt lvm2 filesystems/g' ${MOUNTPOINT}/etc/mkinitcpio.conf 2>$ERR; check_for_error "add lvm/luks hooks" $?; }
 
-    [[ $((LVM + LUKS + BTRFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
+    [[ $((LVM + LUKS + BTRFS_ROOT + ZFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
+
+
+    # if we are using a zfs root we should enable the zfs services
+    if [ $ZFS == 1 ]; then
+        arch_chroot "systemctl enable zfs.target" 2>$ERR
+        check_for_error "enable zfs.target" "$?"
+        arch_chroot "systemctl enable zfs-import-cache" 2>$ERR
+        check_for_error "enable zfs-import-cache" "$?"
+        arch_chroot "systemctl enable zfs-mount" 2>$ERR
+        check_for_error "enable zfs-mount" "$?"
+        arch_chroot "systemctl enable zfs-import.target" 2>$ERR
+        check_for_error "enable zfs-import.target" "$?"
+        # we also need create the cachefile
+        zpool set cachefile=/etc/zfs/zpool.cache $(findmnt ${MOUNTPOINT} -lno SOURCE | awk -F / '{print $1}') 2>$ERR
+        check_for_error "create zpool cache" "$?"
+        cp /etc/zfs/zpool.cache ${MOUNTPOINT}/etc/zfs/zpool.cache 2>$ERR
+        check_for_error "copy cache file" "$?"
+    fi
 
     # If specified, copy over the pacman.conf file to the installation
     if [[ $COPY_PACCONF -eq 1 ]]; then
@@ -357,24 +403,45 @@ install_grub_uefi() {
     boot_encrypted_setting
     # If encryption used amend grub
     [[ $(cat /tmp/.luks_dev) != "" ]] && sed -i "s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" ${MOUNTPOINT}/etc/default/grub
-    #install grub
-    if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
-        arch_chroot "grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck --removable" 2>$ERR
-        check_for_error "grub-install --target=x86_64-efi" $?
+ 
+    # grub config changes for zfs root
+    if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+        # zfs is considered a sparse filesystem so we can't use SAVEDEFAULT
+        sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+        # we need to tell grub where the zfs root is
+        ZFS_PARAM="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
+        sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@"$@ '"${ZFS_PARAM}"'"@g' -e '/^GRUB_CMDLINE_LINUX=/s@"$@ '"${ZFS_PARAM}"'"@g' -i ${MOUNTPOINT}/etc/default/grub
+        # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
+        echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
+        export ZPOOL_VDEV_NAME_PATH=YES
+        # there has to be a better way to do this
+        echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
-        arch_chroot "grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" 2>$ERR
-        check_for_error "grub-install --target=x86_64-efi" $?
+        echo -e "# "'!'"/bin/bash\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
 
+    [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
+
+    # if the device is removable append removable to the grub-install
+    if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
+        sed -e '/^grub-install /s/$/ --removable/g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    fi
+
+    #install grub
+    arch_chroot "grub_installer.sh" 2>$ERR
+    check_for_error "grub-install --target=x86_64-efi" $?
+
+    # the grub_installer is no longer needed - there still needs to be a better way to do this
+    [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        
     # If root is on btrfs volume, amend grub
     [[ -e /tmp/.btrfsroot ]] && \
-      sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+        sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+
     # Enble manjaro grub theme
     basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
     check_for_error "$FUNCNAME grub" $?
     
-    # grub_mkconfig
-
     # Ask if user wishes to set Grub as the default bootloader and act accordingly
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_SetBootDefBody ${UEFI_MOUNT}/EFI/boot $_SetBootDefBody2\n " 0 0
     if [[ $? -eq 0 ]]; then
@@ -386,8 +453,8 @@ install_grub_uefi() {
     fi
 
 }
-install_refind()
 
+install_refind()
 {
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_InstRefindBody\n " 0 0 || return 0
     clear
@@ -474,14 +541,24 @@ install_systemd_boot() {
     arch_chroot "pacman -Ql $(cat /tmp/.chosen_kernels)" | awk '/vmlinuz/ {print $2}' | sed 's~/boot/vmlinuz-~~g' > /tmp/.kernels
 
     echo -e "default  manjaro-$(cat /tmp/.kernels | sort | tail -n1)\ntimeout  10" > ${MOUNTPOINT}${UEFI_MOUNT}/loader/loader.conf 2>$ERR
+
     # Second, the kernel conf files
+
+    # generate appropriate kernel options
+    if [ $(findmnt --real --list -n -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+        SDBOOT_OPTIONS="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
+    else
+        SDBOOT_OPTIONS="root=${bl_root} rw"
+    fi
+
+    # create the entries
     for kernel in $(cat /tmp/.kernels); do
         if [[ -e /mnt/boot/intel-ucode.img ]]; then 
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel.img\noptions\troot=${bl_root} rw" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel-fallback.img\noptions\troot=${bl_root} rw" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
+            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
+            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel-fallback.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
         else
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel.img\noptions\troot=${bl_root} rw" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel-fallback.img\noptions\troot=${bl_root} rw" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
+            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
+            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel-fallback.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
         fi
     done
 
@@ -540,16 +617,39 @@ bios_bootloader() {
                 # If root is on btrfs volume, amend grub
                 [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]] && \
                   sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+
                 # Same setting is needed for LVM 
                 [[ LVM == 1 ]] && \
                   sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
-                
+
+                # grub config changes for zfs root
+                if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
+                    # zfs is considered a sparse filesystem so we can't use SAVEDEFAULT
+                    sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
+                    # we need to tell grub where the zfs root is
+                    ZFS_PARAM="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
+                    sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@"$@ '"${ZFS_PARAM}"'"@g' -e '/^GRUB_CMDLINE_LINUX=/s@"$@ '"${ZFS_PARAM}"'"@g' -i ${MOUNTPOINT}/etc/default/grub
+                    # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
+                    echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
+                    export ZPOOL_VDEV_NAME_PATH=YES
+                    # there has to be a better way to do this
+                    echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                else
+                    echo -e "# "'!'"/bin/bash\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                fi
+
+                [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
+             
                 DIALOG " $_InstGrub " --infobox "\n$_PlsWaitBody\n " 0 0
                 dd if=/dev/zero of=$DEVICE seek=1 count=2047
-                arch_chroot "grub-install --target=i386-pc --recheck $DEVICE" 2>$ERR
+                arch_chroot "grub_installer.sh" 2>$ERR
                 check_for_error "grub-install --target=i386-pc" $?
 
+                # the grub_installer is no longer needed - there still needs to be a better way to do this
+                [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
+
                 #grub_mkconfig
+
                 basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
                 check_for_error "$FUNCNAME grub" $?
                 # For quiet grub, remove fsck
@@ -699,6 +799,13 @@ generate_fstab() {
     fi
     # Edit fstab in case of btrfs subvolumes
     sed -i "s/subvolid=.*,subvol=\/.*,//g" /mnt/etc/fstab
+
+    # remove any zfs datasets that are mounted by zfs
+    for MSOURCE in $(cat ${MOUNTPOINT}/etc/fstab | grep "^[a-z,A-Z]" | awk '{print $1}'); do
+    if [ $(zfs list -H -o mountpoint,name | grep "^/"  | awk '{print $2}'   | grep "^${MSOURCE}$") ]; then
+        sed -e "\|^${MSOURCE}[[:space:]]| s/^#*/#/" -i ${MOUNTPOINT}/etc/fstab
+    fi
+done
 }
 
 # locale array generation code adapted from the Manjaro 0.8 installer

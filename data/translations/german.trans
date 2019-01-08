@@ -53,6 +53,54 @@ _btrfsSVBody3="Dieser Prozess wird wiederholt bis ein Sternchen (*) als Name fü
 _btrfsMntBody="[Leerzeichen] drücken, um die gewünschten Einhängeoptionen aus- oder abzuwählen.\nBitte achten Sie darauf, keine inkompatiblen Optionen zu wählen."
 _btrfsMntConfBody="Bestätigen Sie die Auswahl der Einhängeoptionen:"
 
+#zfs
+_PrepZFS="ZFS (optional)" #translate me!
+_zfsNotSupported="The kernel modules to support ZFS could not be found" #translate me!
+_zfsAutoComplete="Automatic zfs provisioning has been completed" #translate me!
+_zfsMainMenuBody="ZFS is a flexible and resilient file system that combines elements of logical volume management, RAID and traditional file systems.  ZFS on Linux requires special handling and is not ideal for beginners.\n\nSelect automatic to select a partition and allow the system to automate the creation a new a zpool and datasets mounted to '/', '/home' and '/var/cache/pacman'.  Manual configuration is available but requires specific knowledge of zfs." #translate me!
+_zfsMainMenuOptAutomatic="Automatically configure" #translate me!
+_zfsMainMenuOptManual="Manual configuration" #translate me!
+_zfsManualMenuTitle="ZFS Manual Setup" #translate me!
+_zfsManualMenuBody="Please select an option below" #translate me!
+_zfsManualMenuOptCreate="Create a new zpool" #translate me!
+_zfsManualMenuOptImport="Import an existing zpool" #translate me!
+_zfsManualMenuOptNewFile="Create and mount a ZFS filesystem" #translate me!
+_zfsManualMenuOptNewLegacy="Create a legacy ZFS filesystem" #translate me!
+_zfsManualMenuOptNewZvol="Create a new ZVOL" #translate me!
+_zfsManualMenuOptSet="Set a property on a zfs filesystem" #translate me!
+_zfsManualMenuOptDestroy="Destroy a ZFS dataset" #translate me!
+_zfsZpoolPartMenuTitle="Select a partition" #translate me!
+_zfsZpoolPartMenuBody="Select a partition to hold the ZFS zpool" #translate me!
+_zfsZpoolCTitle="zpool Creation" #translate me!
+_zfsZpoolCBody="Enter the name for the new zpool" #translate me!
+_zfsZpoolCValidation1="zpool names must start with a letter and are limited to only alphanumeric characters and the special characters : . - _" #translate me!
+_zfsZpoolCValidation2="zpool names cannot start with the reserved words (log, mirror, raidz, raidz1, raidz2, raidz3, or spare)" #translate me!
+_zfsZpoolImportMenuTitle="Import a zpool" #translate me!
+_zfsZpoolImportMenuBody="Select an existing pool to import" #translate me!
+_zfsSelectZpoolMenuTitle="zpool Selection" #translate me!
+_zfsSelectZpoolMenuBody="Select a zpool from the list" #translate me!
+_zfsMountMenuTitle="Mountpoint Selection" #translate me!
+_zfsMountMenuBody="Enter a mountpoint for the filesystem" #translate me!
+_zfsMountMenuInUse="That mountpoint is already in use, please select a different mountpoint" #translate me!
+_zfsMountMenuNotValid="That is not a valid mountpoint" #translate me!
+_zfsDSMenuNameTitle="ZFS DataSet" #translate me!
+_zfsDSMenuNameBody="Enter a name and relative path for the dataset.  For example, if you want the dataset to be placed at zpool/data/zname, enter 'data/zname'" #translate me!
+_zfsZvolSizeMenuTitle="ZVOL Size" #translate me!
+_zfsZvolSizeMenuBody="Enter the size of the zvol in megabytes(MB)" #translate me!
+_zfsZvolSizeMenuValidation="You must enter a number greater than 0" #translate me!
+_zfsDestroyMenuTitle="Destroy a ZFS dataset" #translate me!
+_zfsDestroyMenuBody="Select the dataset you would like to permanently delete.  Please note that this will recursively delete any child datasets with warning" #translate me!
+_zfsDestroyMenuConfirm1="Please confirm that you want to irrevocably delete all the data on" #translate me!
+_zfsDestroyMenuConfirm2="and the data contained on all of it's children" #translate me!
+_zfsSetMenuTitle="Set a ZFS Property" #translate me!
+_zfsSetMenuBody="Enter the property and value you would like to set using the format property=mountpoint\n\nFor example, you could enter:\ncompression=lz4\nor\nacltype=posixacl" #translate me!
+_zfsSetMenuSelect="Select the dataset you would like to set a property on" #translate me!
+_zfsSetMenuValidation="Input must be the format property=mountpoint" #translate me!
+_zfsCancelled="Operation cancelled" #translate me!
+_zfsFoundRoot="Using ZFS root on '/'" #translate me!
+_zfsZpoolNoPool="No available zfs pools found" #translate me!
+_zfsDatasetNotFound="No datasets available" #translate me!
+
 # Autopartition
 _AutoPartBody1="ACHTUNG! SÄMTLICHE Daten auf"
 _AutoPartBody2="werden gelöscht!\n\nEs wird eine 512MB Boot Partition erzeugt, gefolgt von einer zweiten Partition (root bzw '/') auf dem gesamten verbleibenden Speicherplatz."
