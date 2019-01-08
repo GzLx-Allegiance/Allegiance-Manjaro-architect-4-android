@@ -259,7 +259,7 @@ set_language() {
     # Generate locale and set language
     DIALOG " $_Config " --infobox "\n$_ApplySet\n " 6 40
     sed -i "s/#${CURR_LOCALE}/${CURR_LOCALE}/" /etc/locale.gen
-    locale-gen >/dev/null 2>$ERR
+    locale-gen >/dev/null 2>$ERR &
     export LANG=${CURR_LOCALE}
     check_for_error "set LANG=${CURR_LOCALE}" $?
     ini system.lang "$CURR_LOCALE"
