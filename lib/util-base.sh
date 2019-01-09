@@ -435,7 +435,7 @@ install_grub_uefi() {
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
         
     # If root is on btrfs volume, amend grub
-    [[ -e /tmp/.btrfsroot ]] && \
+    [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && \
         sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
 
     # Enble manjaro grub theme
@@ -615,7 +615,7 @@ bios_bootloader() {
                 [[ $(cat /tmp/.luks_dev) != "" ]] && sed -i "s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" ${MOUNTPOINT}/etc/default/grub
 
                 # If root is on btrfs volume, amend grub
-                [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]] && \
+                [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && \
                   sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
 
                 # Same setting is needed for LVM 
