@@ -1317,17 +1317,15 @@ mount_partitions() {
         get_cryptroot
         echo "$LUKS_DEV" > /tmp/.luks_dev
         # If the root partition is btrfs, offer to create subvolumus
-        if [[ $(lsblk -lno FSTYPE,MOUNTPOINT | awk '/ \/mnt$/ {print $1}') == btrfs ]]; then
+        if [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == btrfs ]]; then
             # Check if there are subvolumes already on the btrfs partition
-            if [[ $(btrfs subvolume list /mnt | wc -l) -gt 1 ]] && DIALOG " The volume has already subvolumes " --yesno "\nFound subvolumes $(btrfs subvolume list /mnt | cut -d" " -f9)\n\nWould you like to mount them? \n " 0 0; then
+            if [[ $(btrfs subvolume list ${MOUNTPOINT} | wc -l) -gt 1 ]] && DIALOG " The volume has already subvolumes " --yesno "\nFound subvolumes $(btrfs subvolume list ${MOUNTPOUNT} | cut -d" " -f9)\n\nWould you like to mount them? \n " 0 0; then
                 # Pre-existing subvolumes and user wants to mount them
                 mount_existing_subvols
             else
                 # No subvolumes present. Make some new ones
-                DIALOG " Your root volume is formatted in btrfs " --yesno "\nWould you like to create subvolumes in it? \n " 0 0 && btrfs_subvolumes && touch /tmp/.btrfsroot
+                DIALOG " Your root volume is formatted in btrfs " --yesno "\nWould you like to create subvolumes in it? \n " 0 0 && btrfs_subvolumes
             fi
-        else 
-            [[ -e /tmp/.btrfsroot ]] && rm /tmp/.btrfsroot
         fi    
     fi
 
