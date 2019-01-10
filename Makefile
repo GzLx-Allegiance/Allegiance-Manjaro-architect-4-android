@@ -38,7 +38,8 @@ LANG = \
 	data/translations/portuguese_brasil.trans \
 	data/translations/russian.trans \
 	data/translations/ukrainian.trans \
-	data/translations/spanish.trans
+	data/translations/spanish.trans \
+	data/translations/turkish.trans
 
 ICONS = \
     data/manjaro-architect.png
