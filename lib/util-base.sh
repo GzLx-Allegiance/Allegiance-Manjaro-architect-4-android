@@ -512,7 +512,10 @@ install_refind()
         sed -i "s|root=.* |cryptdevice=$bl_root:$root_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
-        
+    
+    # set microcode
+    sed -i "s/\"$/\ initrd=\\intel-ucode.img initrd=\\amd-ucode.img initrd=\\initramfs-%v.img\"/g" /mnt/boot/refind_linux.conf
+
     basestrap ${MOUNTPOINT} refind-theme-maia 
     DIALOG " $_InstUefiBtTitle " --infobox "\n$_RefindReady\n " 0 0
     sleep 2
