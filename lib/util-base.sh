@@ -512,9 +512,20 @@ install_refind()
         sed -i "s|root=.* |cryptdevice=$bl_root:$root_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
-    
+    # Figure out microcode
+    rootsubvol=$(findmnt -o TARGET,SOURCE | awk '/\/mnt / {print $2}' | cut -d "[" -f2 | cut -d "]" -f1)
     # set microcode
-    sed -i "s/\"$/\ initrd=\\intel-ucode.img initrd=\\amd-ucode.img initrd=\\initramfs-%v.img\"/g" /mnt/boot/refind_linux.conf
+    if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
+        #there is a separate boot, path to microcode is at partition root
+        sed -i "s|\"$| initrd=/intel-ucode.img initrd=/amd-ucode.img initrd=/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+    elif [[ "$BTRFS_ROOT" -eq 1 ]] && [[ -n "$rootsubvol" ]]; then
+        #Initramfs is on the root partition and root is on btrfs subvolume
+        sed -i "s|\"$| initrd=$rootsubvol/boot/intel-ucode.img initrd=$rootsubvol/boot/amd-ucode.img initrd=$rootsubvol/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+    else
+        #Initramfs is on the root partition
+        sed -i "s|\"$| initrd=/boot/intel-ucode.img initrd=/boot/amd-ucode.img initrd=/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+    fi
+    
 
     basestrap ${MOUNTPOINT} refind-theme-maia 
     DIALOG " $_InstUefiBtTitle " --infobox "\n$_RefindReady\n " 0 0
