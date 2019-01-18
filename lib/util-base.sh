@@ -518,7 +518,7 @@ install_refind()
     if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
         #there is a separate boot, path to microcode is at partition root
         sed -i "s|\"$| initrd=/intel-ucode.img initrd=/amd-ucode.img initrd=/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
-    elif [[ "$BTRFS_ROOT" -eq 1 ]] && [[ -n "$rootsubvol" ]]; then
+    elif [[ -n "$rootsubvol" ]]; then
         #Initramfs is on the root partition and root is on btrfs subvolume
         sed -i "s|\"$| initrd=$rootsubvol/boot/intel-ucode.img initrd=$rootsubvol/boot/amd-ucode.img initrd=$rootsubvol/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
     else
