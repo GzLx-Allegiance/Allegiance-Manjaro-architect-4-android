@@ -538,54 +538,11 @@ install_systemd_boot() {
 
     # Check if already installed. If so, just add entries
     if $(arch_chroot "bootctl status" 2>&1 >/dev/null | grep -q "systemd-boot not installed"); then
-        arch_chroot "bootctl --path=${UEFI_MOUNT} install" 2>$ERR
+        basestrap ${MOUNTPOINT} systemd-boot-manager
+        arch_chroot "sdboot-manage setup" 2>$ERR
         check_for_error "systemd-boot" $?
         [[ $? -eq 0 ]] && touch /tmp/.newsystemdboot
     fi
-    # Deal with LVM Root
-
-    if [[ $(echo $ROOT_PART | grep "/dev/mapper/") != "" ]]; then
-        bl_root=$ROOT_PART
-    else
-        bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOT_PART} | sed 's/.*=//g' | sed 's/\"//g')"
-    fi
-
-    # Create default config files. First the loader
-    #echo /mnt/boot/initramfs-* | sed 's/\/mnt\/boot\/initramfs-//g' | sed 's/\.img//g' | xargs -n1 | grep -v "fallback" > /tmp/.kernels
-    arch_chroot "pacman -Ql $(cat /tmp/.chosen_kernels)" | awk '/vmlinuz/ {print $2}' | sed 's~/boot/vmlinuz-~~g' > /tmp/.kernels
-
-    echo -e "default  manjaro-$(cat /tmp/.kernels | sort | tail -n1)\ntimeout  10" > ${MOUNTPOINT}${UEFI_MOUNT}/loader/loader.conf 2>$ERR
-
-    # Second, the kernel conf files
-
-    # generate appropriate kernel options
-    if [ $(findmnt --real --list -n -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
-        SDBOOT_OPTIONS="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
-    else
-        SDBOOT_OPTIONS="root=${bl_root} rw"
-    fi
-
-    # create the entries
-    for kernel in $(cat /tmp/.kernels); do
-        if [[ -e /mnt/boot/intel-ucode.img ]]; then 
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/intel-ucode.img\ninitrd\t/initramfs-$kernel-fallback.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
-        else
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel.conf" >> /tmp/.sysdconfd
-            echo -e "title\tManjaro Linux $kernel\nlinux\t/vmlinuz-$kernel\ninitrd\t/initramfs-$kernel-fallback.img\noptions\t${SDBOOT_OPTIONS}" > "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" && echo "${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/manjaro-$kernel-fallback.conf" >> /tmp/.sysdconfd
-        fi
-    done
-
-    # Finally, amend kernel conf files for LUKS and BTRFS
-    sysdconf=$(cat /tmp/.sysdconfd)
-    for i in ${sysdconf}; do
-        [[ $LUKS_DEV != "" ]] && sed -i "s~rw~$LUKS_DEV rw~g" ${i}
-        # Deal with btrfs subvolumes
-        if $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
-            rootflag="rootflags=$(mount | awk '$3 == "/mnt" {print $6}' | sed 's/^.*subvol=/subvol=/' | sed -e 's/,.*$/,/p' | sed 's/)//g')"
-            sed -i "s|rw|rw $rootflag|g" ${i}
-        fi
-    done
 
     # Check if the volume is removable. If so, dont use autodetect
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
