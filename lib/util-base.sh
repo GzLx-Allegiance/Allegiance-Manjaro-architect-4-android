@@ -514,19 +514,33 @@ install_refind()
     fi
     # Figure out microcode
     rootsubvol=$(findmnt -o TARGET,SOURCE | awk '/\/mnt / {print $2}' | cut -d "[" -f2 | cut -d "]" -f1)
+    UCODE=$(arch_chroot "arch_chroot "sdboot-manage setup" 2>$ERR" 2>$ERR)
+    if [[ $(echo ${UCODE} | wc -l) -gt 1 ]]; then
     # set microcode
-    if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
-        #there is a separate boot, path to microcode is at partition root
-        sed -i "s|\"$| initrd=/intel-ucode.img initrd=/amd-ucode.img initrd=/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
-    elif [[ -n "$rootsubvol" ]]; then
-        #Initramfs is on the root partition and root is on btrfs subvolume
-        sed -i "s|\"$| initrd=$rootsubvol/boot/intel-ucode.img initrd=$rootsubvol/boot/amd-ucode.img initrd=$rootsubvol/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
+            #there is a separate boot, path to microcode is at partition root
+            sed -i "s|\"$| initrd=/intel-ucode.img initrd=/amd-ucode.img initrd=/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        elif [[ -n "$rootsubvol" ]]; then
+            #Initramfs is on the root partition and root is on btrfs subvolume
+            sed -i "s|\"$| initrd=$rootsubvol/boot/intel-ucode.img initrd=$rootsubvol/boot/amd-ucode.img initrd=$rootsubvol/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        else
+            #Initramfs is on the root partition
+            sed -i "s|\"$| initrd=/boot/intel-ucode.img initrd=/boot/amd-ucode.img initrd=/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        fi
     else
-        #Initramfs is on the root partition
-        sed -i "s|\"$| initrd=/boot/intel-ucode.img initrd=/boot/amd-ucode.img initrd=/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
-    fi
+        if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
+            #there is a separate boot, path to microcode is at partition root
+            sed -i "s|\"$| initrd=/${UCODE}-ucode.img initrd=/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        elif [[ -n "$rootsubvol" ]]; then
+            #Initramfs is on the root partition and root is on btrfs subvolume
+            sed -i "s|\"$| initrd=$rootsubvol/boot/${UCODE}-ucode.img initrd=$rootsubvol/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        else
+            #Initramfs is on the root partition
+            sed -i "s|\"$| initrd=/boot/${UCODE}-ucode.img initrd=/boot/initramfs-%v.img\"|g" /mnt/boot/refind_linux.conf
+        fi
+    fi  
     
-
+    
     basestrap ${MOUNTPOINT} refind-theme-maia 
     DIALOG " $_InstUefiBtTitle " --infobox "\n$_RefindReady\n " 0 0
     sleep 2
