@@ -1505,12 +1505,12 @@ btrfs_subvolumes() {
                 mount -o $(cat ${MOUNT_OPTS}),subvol="$sub" "$(cat /tmp/.root_partition)" /mnt"$(cat /tmp/.mountp)"
             done
         else
-            DIALOG " Automatic btrfs subvolumes" --yesno "\nThis creates subvolumes @ for /,@home for /home, @cache for /var/cache and subvolume @snapshots. \n " 0 0 || return 0
+            DIALOG " Automatic btrfs subvolumes" --yesno "\nThis creates subvolumes @ for /,@home for /home, @cache for /var/cache. \n " 0 0 || return 0
             # Create subvolumes automatically
             cd /mnt
             btrfs subvolume create @
             btrfs subvolume create @home
-            #btrfs subvolume create @cache
+            btrfs subvolume create @cache
             #btrfs subvolume create @snapshots
             cd
             # Mount subvolumes
