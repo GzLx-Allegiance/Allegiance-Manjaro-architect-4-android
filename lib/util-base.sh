@@ -514,7 +514,7 @@ install_refind()
     fi
     # Figure out microcode
     rootsubvol=$(findmnt -o TARGET,SOURCE | awk '/\/mnt / {print $2}' | cut -d "[" -f2 | cut -d "]" -f1)
-    UCODE=$(arch_chroot "arch_chroot "pacman -Qqs ucode" 2>$ERR" 2>$ERR)
+    UCODE=$(arch_chroot "pacman -Qqs ucode" 2>$ERR)
     if [[ $(echo ${UCODE} | wc -l) -gt 1 ]]; then
     # set microcode
         if findmnt -o TARGET,SOURCE | grep -q "/mnt/boot " ; then
