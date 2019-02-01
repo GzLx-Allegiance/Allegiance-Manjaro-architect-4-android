@@ -550,13 +550,11 @@ install_systemd_boot() {
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_InstSystdBBody\n " 0 0 || return 0
     clear
 
-    # Check if already installed. If so, just add entries
-    if $(arch_chroot "bootctl status" 2>&1 >/dev/null | grep -q "systemd-boot not installed"); then
-        basestrap ${MOUNTPOINT} systemd-boot-manager
-        arch_chroot "sdboot-manage setup" 2>$ERR
-        check_for_error "systemd-boot" $?
-        [[ $? -eq 0 ]] && touch /tmp/.newsystemdboot
-    fi
+    arch_chroot "bootctl --path=${UEFI_MOUNT} install" 2>$ERR
+    basestrap ${MOUNTPOINT} systemd-boot-manager
+    arch_chroot "sdboot-manage gen" 2>$ERR
+    check_for_error "systemd-boot" $?
+    [[ $? -eq 0 ]] && touch /tmp/.newsystemdboot
 
     # Check if the volume is removable. If so, dont use autodetect
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
