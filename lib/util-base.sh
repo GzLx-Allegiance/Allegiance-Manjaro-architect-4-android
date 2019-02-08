@@ -209,7 +209,7 @@ install_base() {
     while ((loopmenu)); do
         # Choose kernel and possibly base-devel
         DIALOG " $_InstBseTitle " --checklist "\n$_InstStandBseBody$_UseSpaceBar\n " 0 0 13 \
-          "yaourt + base-devel" "-" off \
+          "yay + base-devel" "-" off \
           $(cat /tmp/.available_kernels | awk '$0=$0" - off"') 2>${PACKAGES} || { loopmenu=0; return 0; }
         if [[ ! $(grep "linux" ${PACKAGES}) ]]; then
             # Check if a kernel is already installed
@@ -250,7 +250,7 @@ install_base() {
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
-        for kernel in $(cat ${PACKAGES} | grep -vE '(yaourt|base-devel)'); do
+        for kernel in $(cat ${PACKAGES} | grep -vE '(yay|base-devel)'); do
             cat /tmp/.modules | sed "s/KERNEL/\n$kernel/g" >> /mnt/.base
         done
         echo " " >> /mnt/.base
@@ -386,6 +386,9 @@ install_grub_uefi() {
         arch_chroot "mkinitcpio -P" 
     fi
     clear
+    mkdir /mnt/hostlvm
+    mount --bind /run/lvm /mnt/hostlvm
+    manjaro-chroot /mnt "ln -s /hostlvm /run/lvm"
     if $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
         basestrap ${MOUNTPOINT} grub-btrfs efibootmgr dosfstools 2>$ERR
         check_for_error "$FUNCNAME grub" $? || return 1

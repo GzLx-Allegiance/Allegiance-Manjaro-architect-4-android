@@ -256,7 +256,7 @@ install_desktop() {
     while ((loopmenu)); do
         # Choose kernel and possibly base-devel
         DIALOG " $_InstBseTitle " --checklist "\n$_InstStandBseBody$_UseSpaceBar\n " 0 0 12 \
-          "yaourt + base-devel" "-" off \
+          "yay + base-devel" "-" off \
           $(cat /tmp/.available_kernels | awk '$0=$0" - off"') 2>${PACKAGES} || { loopmenu=0; return 0; }
         if [[ ! $(grep "linux" ${PACKAGES}) ]]; then
             # Check if a kernel is already installed
@@ -297,7 +297,7 @@ install_desktop() {
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
-        for kernel in $(cat ${PACKAGES} | grep -vE '(yaourt|base-devel)'); do
+        for kernel in $(cat ${PACKAGES} | grep -vE '(yay|base-devel)'); do
             cat /tmp/.modules | sed "s/KERNEL/\n$kernel/g" >> /mnt/.base
         done
         echo " " >> /mnt/.base
