@@ -1081,7 +1081,7 @@ zfs_new_ds() {
 
                 # validation
                 [[ $(findmnt -n ${MOUNTPOINT}/${zmount}) ]] && zfsmenubody=$_zfsMountMenuInUse
-                [[ ! $zmount =~ ^/ ]] && zfsmenubody=$_zfsMountMenuNotValid
+                [[ ! ($zmount =~ ^/ || $zmount == none) ]] && zfsmenubody=$_zfsMountMenuNotValid
 
                 [[ $zfsmenubody == $_zfsMountMenuBody ]] && loopmenu=0
             done
