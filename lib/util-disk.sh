@@ -1052,7 +1052,7 @@ zfs_new_ds() {
         DIALOG " $_zfsDSMenuNameTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 1
 
         # validation
-        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:_-]*$ ]] && zfsmenubody=$_zfsZpoolCValidation1 || loopmenu=0
+        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:/_-]*$ ]] && zfsmenubody=$_zfsZpoolCValidation1 || loopmenu=0
     done
     local zname=$(cat ${ANSWER})
 
