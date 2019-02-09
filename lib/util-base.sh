@@ -399,19 +399,19 @@ install_grub_uefi() {
  
     # grub config changes for zfs root
     if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
-        # zfs is considered a sparse filesystem so we can't use SAVEDEFAULT
-        sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
-        # we need to tell grub where the zfs root is
-        ZFS_PARAM="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
-        sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@"$@ '"${ZFS_PARAM}"'"@g' -e '/^GRUB_CMDLINE_LINUX=/s@"$@ '"${ZFS_PARAM}"'"@g' -i ${MOUNTPOINT}/etc/default/grub
         # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
         echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
         export ZPOOL_VDEV_NAME_PATH=YES
-        # there has to be a better way to do this
         echo -e "# "'!'"/bin/bash
 ln -s /hostlvm /run/lvm
-pacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs
 export ZPOOL_VDEV_NAME_PATH=YES
+pacman -S --noconfirm --needed grub efibootmgr dosfstools
+# zfs is considered a sparse filesystem so we can't use SAVEDEFAULT
+sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
+# we need to tell grub where the zfs root is
+zroot=\"zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw\"
+sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@\"\$@ '\"\${zroot}\"'\"@g' -e '/^GRUB_CMDLINE_LINUX=/s@\"\$@ '\"\${zroot}\"'\"@g' -i /etc/default/grub
+sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck
 pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
@@ -438,7 +438,7 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     arch_chroot "grub_installer.sh" 2>$ERR
     check_for_error "grub-install --target=x86_64-efi" $?
     umount /mnt/hostlvm
-    # the grub_installer is no longer needed - there still needs to be a better way to do this
+    # the grub_installer is no longer needed
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
             
     # Ask if user wishes to set Grub as the default bootloader and act accordingly
@@ -610,8 +610,8 @@ bios_bootloader() {
                     # zfs is considered a sparse filesystem so we can't use SAVEDEFAULT
                     sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
                     # we need to tell grub where the zfs root is
-                    ZFS_PARAM="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
-                    sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@"$@ '"${ZFS_PARAM}"'"@g' -e '/^GRUB_CMDLINE_LINUX=/s@"$@ '"${ZFS_PARAM}"'"@g' -i ${MOUNTPOINT}/etc/default/grub
+                    zroot="zfs=$(findmnt -ln -o SOURCE ${MOUNTPOINT}) rw"
+                    sed -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/s@"$@ '"${zroot}"'"@g' -e '/^GRUB_CMDLINE_LINUX=/s@"$@ '"${zroot}"'"@g' -i ${MOUNTPOINT}/etc/default/grub
                     # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
                     echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
                     export ZPOOL_VDEV_NAME_PATH=YES
