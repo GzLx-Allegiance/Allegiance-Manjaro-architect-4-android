@@ -388,16 +388,6 @@ install_grub_uefi() {
     clear
     mkdir /mnt/hostlvm
     mount --bind /run/lvm /mnt/hostlvm
-    manjaro-chroot /mnt "ln -s /hostlvm /run/lvm"
-    if $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
-        basestrap ${MOUNTPOINT} grub-btrfs efibootmgr dosfstools 2>$ERR
-        check_for_error "$FUNCNAME grub" $? || return 1
-    else
-        basestrap ${MOUNTPOINT} grub efibootmgr dosfstools 2>$ERR
-        check_for_error "$FUNCNAME grub" $? || return 1
-    fi
-
-    #DIALOG " $_InstGrub " --infobox "\n$_PlsWaitBody\n " 0 0
     
     # if root is encrypted, amend /etc/default/grub
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
@@ -418,9 +408,9 @@ install_grub_uefi() {
         echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
         export ZPOOL_VDEV_NAME_PATH=YES
         # there has to be a better way to do this
-        echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash\nln -s /hostlvm /run/lvm\npacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck\npacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
-        echo -e "# "'!'"/bin/bash\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash\nln -s /hostlvm /run/lvm\npacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck\npacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
 
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
@@ -429,21 +419,20 @@ install_grub_uefi() {
     if [[ "$(cat /sys/block/${root_device}/removable)" == 1 ]]; then
         sed -e '/^grub-install /s/$/ --removable/g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
+    # If the root is on btrfs-subvolume, amend grub installation 
+    if ! $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
+        sed -e 's/ grub-btrfs//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    fi
 
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
     check_for_error "grub-install --target=x86_64-efi" $?
-
+    umount /mnt/hostlvm
     # the grub_installer is no longer needed - there still needs to be a better way to do this
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
         
     # If root is on btrfs volume, amend grub
-    [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && \
-        sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
-
-    # Enble manjaro grub theme
-    basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
-    check_for_error "$FUNCNAME grub" $?
+    [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
     
     # Ask if user wishes to set Grub as the default bootloader and act accordingly
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_SetBootDefBody ${UEFI_MOUNT}/EFI/boot $_SetBootDefBody2\n " 0 0
@@ -456,6 +445,7 @@ install_grub_uefi() {
     fi
 
 }
+
 
 install_refind()
 {
