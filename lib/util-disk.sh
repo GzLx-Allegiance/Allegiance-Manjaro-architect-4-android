@@ -442,8 +442,12 @@ mount_current_partition() {
 }
 
 make_swap() {
-    # Ask user to select partition or create swapfile
-    DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" "$_SelSwpFile" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    # Ask user to select partition or create swapfile if swapfiles are valid for the root filesystem
+    if [[ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" || $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "btrfs" ]]; then
+        DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    else
+        DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" "$_SelSwpFile" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    fi
 
     if [[ $(cat ${ANSWER}) != "$_SelSwpNone" ]]; then
         PARTITION=$(cat ${ANSWER})
