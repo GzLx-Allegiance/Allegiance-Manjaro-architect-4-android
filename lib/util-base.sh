@@ -408,9 +408,19 @@ install_grub_uefi() {
         echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
         export ZPOOL_VDEV_NAME_PATH=YES
         # there has to be a better way to do this
-        echo -e "# "'!'"/bin/bash\nln -s /hostlvm /run/lvm\npacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck\npacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash
+ln -s /hostlvm /run/lvm
+pacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs
+export ZPOOL_VDEV_NAME_PATH=YES
+grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck
+pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     else
-        echo -e "# "'!'"/bin/bash\nln -s /hostlvm /run/lvm\npacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs\ngrub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck\npacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo -e "# "'!'"/bin/bash
+ln -s /hostlvm /run/lvm
+pacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs
+findmnt | awk '/^\/ / {print $3}' | grep -q btrfs && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
+grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck
+pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
 
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
@@ -430,10 +440,7 @@ install_grub_uefi() {
     umount /mnt/hostlvm
     # the grub_installer is no longer needed - there still needs to be a better way to do this
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
-        
-    # If root is on btrfs volume, amend grub
-    [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
-    
+            
     # Ask if user wishes to set Grub as the default bootloader and act accordingly
     DIALOG " $_InstUefiBtTitle " --yesno "\n$_SetBootDefBody ${UEFI_MOUNT}/EFI/boot $_SetBootDefBody2\n " 0 0
     if [[ $? -eq 0 ]]; then
