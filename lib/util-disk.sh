@@ -442,8 +442,12 @@ mount_current_partition() {
 }
 
 make_swap() {
-    # Ask user to select partition or create swapfile
-    DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" "$_SelSwpFile" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    # Ask user to select partition or create swapfile if swapfiles are valid for the root filesystem
+    if [[ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" || $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "btrfs" ]]; then
+        DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    else
+        DIALOG " $_PrepMntPart " --menu "\n$_SelSwpBody\n " 0 0 12 "$_SelSwpNone" $"-" "$_SelSwpFile" $"-" ${PARTITIONS} 2>${ANSWER} || return 0
+    fi
 
     if [[ $(cat ${ANSWER}) != "$_SelSwpNone" ]]; then
         PARTITION=$(cat ${ANSWER})
@@ -1048,7 +1052,7 @@ zfs_new_ds() {
         DIALOG " $_zfsDSMenuNameTitle " --inputbox "\n$zfsmenubody\n " 0 0 "" 2>${ANSWER} || return 1
 
         # validation
-        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:_-]*$ ]] && zfsmenubody=$_zfsZpoolCValidation1 || loopmenu=0
+        [[ ! $(cat ${ANSWER}) =~ ^[a-zA-Z][a-zA-Z0-9.:/_-]*$ ]] && zfsmenubody=$_zfsZpoolCValidation1 || loopmenu=0
     done
     local zname=$(cat ${ANSWER})
 
@@ -1081,7 +1085,7 @@ zfs_new_ds() {
 
                 # validation
                 [[ $(findmnt -n ${MOUNTPOINT}/${zmount}) ]] && zfsmenubody=$_zfsMountMenuInUse
-                [[ ! $zmount =~ ^/ ]] && zfsmenubody=$_zfsMountMenuNotValid
+                [[ ! ($zmount =~ ^/ || $zmount == none) ]] && zfsmenubody=$_zfsMountMenuNotValid
 
                 [[ $zfsmenubody == $_zfsMountMenuBody ]] && loopmenu=0
             done
