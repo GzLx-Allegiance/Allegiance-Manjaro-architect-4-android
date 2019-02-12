@@ -223,7 +223,7 @@ prep_menu() {
     local PARENT="$FUNCNAME"
     declare -i loopmenu=1
     while ((loopmenu)); do
-        submenu 10
+        submenu 11
         DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 20 60 11 \
           "1" "$_VCKeymapTitle" \
           "2" "$_DevShowOpt" \

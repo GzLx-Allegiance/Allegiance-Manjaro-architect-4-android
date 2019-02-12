@@ -41,7 +41,7 @@ border2_color = dialog_color
 searchbox_border2_color = dialog_color
 menubox_border2_color = dialog_color
 
-aspect = 0
+#aspect = 0
 separate_widget = ""
 tab_len = 0
 visit_items = off
