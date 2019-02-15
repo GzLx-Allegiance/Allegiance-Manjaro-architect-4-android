@@ -578,7 +578,7 @@ bios_bootloader() {
     # If something has been selected, act
     if [[ $(cat ${PACKAGES}) != "" ]]; then
         sed -i 's/+ \|\"//g' ${PACKAGES}
-        basestrap ${MOUNTPOINT} $(cat ${PACKAGES}) 2>$ERR
+        #basestrap ${MOUNTPOINT} $(cat ${PACKAGES}) 2>$ERR
         check_for_error "$FUNCNAME" $? || return 1
 
         # If Grub, select device
@@ -615,16 +615,34 @@ bios_bootloader() {
                     # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
                     echo ZPOOL_VDEV_NAME_PATH=YES >> ${MOUNTPOINT}/etc/environment
                     export ZPOOL_VDEV_NAME_PATH=YES
-                    # there has to be a better way to do this
-                    echo -e "# "'!'"/bin/bash\nexport ZPOOL_VDEV_NAME_PATH=YES\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    # there has to be a better way to do this $(cat ${PACKAGES})
+                    echo -e "# "'!'"/bin/bash
+ln -s /hostlvm /run/lvm
+export ZPOOL_VDEV_NAME_PATH=YES
+pacman -S --noconfirm --needed grub os-prober
+grub-install --target=i386-pc --recheck $DEVICE
+pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 else
-                    echo -e "# "'!'"/bin/bash\ngrub-install --target=i386-pc --recheck $DEVICE" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo -e "# "'!'"/bin/bash
+ln -s /hostlvm /run/lvm
+pacman -S --noconfirm --needed grub os-prober grub-btrfs
+grub-install --target=i386-pc --recheck $DEVICE
+pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
-
+                # If the root is on btrfs-subvolume, amend grub installation 
+                if ! $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
+                    sed -e 's/ grub-btrfs//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                fi
+                # Remove os-prober if not selected
+                if ! cat ${PACKAGES} | grep -q os-prober ; then 
+                    sed -e 's/ os-prober//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                fi
                 [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && chmod a+x ${MOUNTPOINT}/usr/bin/grub_installer.sh
              
                 DIALOG " $_InstGrub " --infobox "\n$_PlsWaitBody\n " 0 0
                 dd if=/dev/zero of=$DEVICE seek=1 count=2047
+                mkdir /mnt/hostlvm
+                mount --bind /run/lvm /mnt/hostlvm
                 arch_chroot "grub_installer.sh" 2>$ERR
                 check_for_error "grub-install --target=i386-pc" $?
 
@@ -633,7 +651,7 @@ bios_bootloader() {
 
                 #grub_mkconfig
 
-                basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
+                #basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
                 check_for_error "$FUNCNAME grub" $?
                 # For quiet grub, remove fsck
                 if grep "^HOOKS"  ${MOUNTPOINT}/etc/mkinitcpio.conf | grep -q fsck; then
@@ -641,6 +659,8 @@ bios_bootloader() {
                     arch_chroot "mkinitcpio -P" 
                 fi
             fi
+            umount /mnt/hostlvm
+            rmdir /mnt/hostlvm
         else
             # Syslinux
             DIALOG " $_InstSysTitle " --menu "\n$_InstSysBody\n " 0 0 2 \
