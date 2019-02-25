@@ -513,7 +513,7 @@ install_refind()
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
     # Figure out microcode
-    rootsubvol=$(findmnt -o TARGET,SOURCE | awk '/\/mnt / {print $2}' | cut -d "[" -f2 | cut -d "]" -f1)
+    rootsubvol=$(findmnt -o TARGET,SOURCE | awk '/\/mnt / {print $2}' | grep -o "\[.*\]" | cut -d "[" -f2 | cut -d "]" -f1 | sed 's/^\///')
     UCODE=$(arch_chroot "pacman -Qqs ucode" 2>$ERR)
     if [[ $(echo ${UCODE} | wc -l) -gt 1 ]]; then
     # set microcode
