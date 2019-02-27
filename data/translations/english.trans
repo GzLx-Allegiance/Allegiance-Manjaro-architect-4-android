@@ -374,7 +374,7 @@ _InstComBody="Some environments require additional packages to function better."
 
 # Display Manager
 _DmChTitle="Install Display Manager"
-_DmChBody="gdm lists Gnome-shell as a dependency. sddm is recommended for plasma. lightdm will incude lightdm-gtk-greeter. slim is no longer maintained."
+_DmChBody="gdm lists Gnome-shell as a dependency. sddm is recommended for plasma. lightdm will include lightdm-gtk-greeter. slim is no longer maintained."
 _DmDoneBody="Display manager has been installed and enabled."
 
 # Network Manager
