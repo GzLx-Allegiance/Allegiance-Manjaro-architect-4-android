@@ -591,7 +591,7 @@ luks_default() {
     # Encrypt selected partition or LV with credentials given
     DIALOG " $_LuksEncrypt " --infobox "\n$_PlsWaitBody\n " 0 0
     sleep 2
-    echo $PASSWD | cryptsetup -q luksFormat ${PARTITION} 2>$ERR
+    echo $PASSWD | cryptsetup -q --type luks1 luksFormat ${PARTITION} 2>$ERR
     check_for_error "luksFormat ${PARTITION}" $?
 
     # Now open the encrypted partition or LV
