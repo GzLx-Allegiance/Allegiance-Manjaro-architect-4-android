@@ -711,17 +711,20 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
 }
 
 setup_luks_keyfile() {
-    # Create a keyfile
-    [[ -e /mnt/crypto_keyfile.bin ]] || dd bs=512 count=4 if=/dev/urandom of=/mnt/crypto_keyfile.bin && echo "Generating a keyfile"
-    chmod 000 /mnt/crypto_keyfile.bin
     # Add keyfile to luks
-    echo "Adding the keyfile to the LUKS configuration"
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
     root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
-    cryptsetup luksAddKey /dev/"$root_part" /mnt/crypto_keyfile.bin || echo "Something vent wrong with adding the LUKS key. Is /dev/$root_part the right partition?"
-    # Add keyfile to initcpio
-    grep -q '/crypto_keyfile.bin' /mnt/etc/mkinitcpio.conf || sed -i '/FILES/ s~)~/crypto_keyfile.bin)~' /mnt/etc/mkinitcpio.conf && echo "Adding keyfile to the initcpio"
-    arch_chroot "mkinitcpio -P"    
+    numberoflukskeys=$(cryptsetup luksDump /dev/"$root_part" | grep "ENABLED" | wc -l)
+    if [[ "$numberoflukskeys" -lt 2 ]] 
+        # Create a keyfile
+        [[ -e /mnt/crypto_keyfile.bin ]] || dd bs=512 count=4 if=/dev/urandom of=/mnt/crypto_keyfile.bin && echo "Generating a keyfile"
+        chmod 000 /mnt/crypto_keyfile.bin
+        echo "Adding the keyfile to the LUKS configuration"
+        cryptsetup luksAddKey /dev/"$root_part" /mnt/crypto_keyfile.bin || echo "Something vent wrong with adding the LUKS key. Is /dev/$root_part the right partition?"
+        # Add keyfile to initcpio
+        grep -q '/crypto_keyfile.bin' /mnt/etc/mkinitcpio.conf || sed -i '/FILES/ s~)~/crypto_keyfile.bin)~' /mnt/etc/mkinitcpio.conf && echo "Adding keyfile to the initcpio"
+        arch_chroot "mkinitcpio -P"
+    fi    
 }
 
 boot_encrypted_setting() {
