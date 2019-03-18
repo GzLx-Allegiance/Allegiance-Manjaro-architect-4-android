@@ -966,7 +966,7 @@ create_new_user() {
 
     # Create the user, set password, then remove temporary password file
     arch_chroot "groupadd ${USER}"
-    arch_chroot "useradd ${USER} -m -g ${USER} -G wheel,storage,power,network,video,audio,lp -s $shell" 2>$ERR
+    arch_chroot "useradd ${USER} -m -g ${USER} -G wheel,storage,power,network,video,audio,lp,sys,input -s $shell" 2>$ERR
     check_for_error "add user to groups" $?
     echo -e "${PASSWD}\n${PASSWD}" > /tmp/.passwd
     arch_chroot "passwd ${USER}" < /tmp/.passwd >/dev/null 2>$ERR
