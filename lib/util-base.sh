@@ -393,10 +393,7 @@ install_grub_uefi() {
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
     root_device=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
     root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
-    boot_encrypted_setting
-    # If encryption used amend grub
-    [[ $(cat /tmp/.luks_dev) != "" ]] && sed -i "s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" ${MOUNTPOINT}/etc/default/grub
- 
+    
     # grub config changes for zfs root
     if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
         # zfs needs ZPOOL_VDEV_NAME_PATH set to properly find the device
@@ -433,9 +430,15 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     if ! $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
         sed -e 's/ grub-btrfs//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
-
+    # If encryption used amend grub
+    if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
+        sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    fi
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
+    boot_encrypted_setting
     check_for_error "grub-install --target=x86_64-efi" $?
     umount /mnt/hostlvm
     # the grub_installer is no longer needed
@@ -598,9 +601,6 @@ bios_bootloader() {
                     sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
                 fi
 
-                # If encryption used amend grub
-                [[ $(cat /tmp/.luks_dev) != "" ]] && sed -i "s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" ${MOUNTPOINT}/etc/default/grub
-
                 # If root is on btrfs volume, amend grub
                 [[ $(findmnt -no FSTYPE ${MOUNTPOINT}) == "btrfs" ]] && \
                   sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i ${MOUNTPOINT}/etc/default/grub
@@ -637,6 +637,13 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                 if ! $(mount | awk '$3 == "/mnt" {print $0}' | grep btrfs | grep -qv subvolid=5) ; then 
                     sed -e 's/ grub-btrfs//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
+                # If encryption used amend grub
+                if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
+                    sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                fi
+
                 # Remove os-prober if not selected
                 if ! cat ${PACKAGES} | grep -q os-prober ; then 
                     sed -e 's/ os-prober//g' -i ${MOUNTPOINT}/usr/bin/grub_installer.sh
