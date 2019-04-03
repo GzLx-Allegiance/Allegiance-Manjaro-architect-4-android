@@ -498,18 +498,22 @@ install_refind()
 
     # LVM on LUKS  
     if [[ $LUKS == 1 ]] && [[ $(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
-        mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
-        bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-        crypt_name="$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
-        sed -i "s|root=.* |cryptdevice=$bl_root:$crypt_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
-        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+        #mapper_name="$(mount | awk '/\/mnt / {print $1}')"
+        #ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
+        #bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
+        #crypt_name="$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
+        #sed -i "s|root=.* |cryptdevice=$bl_root:$crypt_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
+        #sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+        luks_opt=$(cat /tmp/.luks_dev)
+        sed -i "s|root=.* |$luks_opt |g" /mnt/boot/refind_linux.conf
+        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf        
     # Plain LUKS
     elif [[ $LUKS == 1 ]]; then
-        mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
-        bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-        sed -i "s|root=.* |cryptdevice=$bl_root:$root_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
+        #mapper_name="$(mount | awk '/\/mnt / {print $1}')"
+        #ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
+        #bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
+        luks_opt=$(cat /tmp/.luks_dev)
+        sed -i "s|root=.* |$luks_opt |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
     # Figure out microcode
