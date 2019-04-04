@@ -436,6 +436,11 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
         echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
         echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
+    # If Full disk encryption is used, use a keyfile
+    if $fde; then
+        echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
+        sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+    fi
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
     boot_encrypted_setting
@@ -643,6 +648,11 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                     echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
+                # If Full disk encryption is used, use a keyfile
+                if $fde; then
+                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
+                    sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                fi
 
                 # Remove os-prober if not selected
                 if ! cat ${PACKAGES} | grep -q os-prober ; then 
@@ -745,37 +755,31 @@ boot_encrypted_setting() {
         root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
         # Check if root is encrypted
         if  [[ "$LUKS" == 1 ]]; then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         elif $(lsblk "/dev/mapper/$root_name" | grep -q 'crypt' ); then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         elif $(lsblk | grep "/mnt$" | grep -q 'crypt' ); then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         # Check if root is on encrypted lvm volume
         elif $(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         fi
     else
         # There is a separate /boot. Check if it is encrypted
         boot_name=$(mount | awk '/\/mnt\/boot / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
         if $(lsblk | grep '/mnt/boot' | grep -q 'crypt' ); then
-            grep -q "GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         # Check if the /boot is inside encrypted lvm volume
         elif $(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$boot_name/,/disk/p" | awk '{print $6}' | grep -q crypt); then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         elif $(lsblk "/dev/mapper/$boot_name" | grep -q 'crypt' ); then
-            grep -q "^GRUB_ENABLE_CRYPTODISK=y" /mnt/etc/default/grub || \
-            sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /mnt/etc/default/grub
+            fde=true
             setup_luks_keyfile
         fi
     fi
