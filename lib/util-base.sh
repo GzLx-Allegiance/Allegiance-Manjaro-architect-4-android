@@ -438,8 +438,10 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     fi
     # If Full disk encryption is used, use a keyfile
     if $fde; then
+        sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
         echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
         sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
@@ -650,8 +652,10 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                 fi
                 # If Full disk encryption is used, use a keyfile
                 if $fde; then
+                    sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
                     echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
                     sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
                 # Remove os-prober if not selected
