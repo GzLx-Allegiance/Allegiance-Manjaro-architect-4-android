@@ -846,7 +846,7 @@ set_locale() {
 
     echo "LANG=\"${LOCALE}\"" > ${MOUNTPOINT}/etc/locale.conf
     sed -i "s/#${LOCALE}/${LOCALE}/" ${MOUNTPOINT}/etc/locale.gen 2>$ERR
-    arch_chroot "locale-gen" >/dev/null 2>$ERR
+    arch_chroot "locale-gen" >/dev/null 2>$ERR &
     check_for_error "$FUNCNAME" "$?"
     ini linux.locale "$LOCALE"
 
