@@ -647,14 +647,14 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                 # If encryption used amend grub
                 if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
                     sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\\\""$(cat /tmp/.luks_dev | awk '{print $1}')\\\"~g\"" /etc/default/grub" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh && echo "adding kernel parameter $(cat /tmp/.luks_dev)"
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
                 # If Full disk encryption is used, use a keyfile
                 if $fde; then
+                    echo "Full disk encryption enabled"
                     sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
-                    sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
