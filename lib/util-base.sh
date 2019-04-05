@@ -393,6 +393,7 @@ install_grub_uefi() {
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
     root_device=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/disk/p" | awk '/disk/ {print $1}')
     root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
+    boot_encrypted_setting
     
     # grub config changes for zfs root
     if [ $(findmnt -ln -o FSTYPE ${MOUNTPOINT}) == "zfs" ]; then
@@ -433,19 +434,18 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     # If encryption used amend grub
     if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
         sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-        echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\\\""$(cat /tmp/.luks_dev | awk '{print $1}')\\\"~g\"" /etc/default/grub" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh && echo "adding kernel parameter $(cat /tmp/.luks_dev)"
         echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
     # If Full disk encryption is used, use a keyfile
     if $fde; then
+        echo "Full disk encryption enabled"
         sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-        echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
-        sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
         echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
-    boot_encrypted_setting
     check_for_error "grub-install --target=x86_64-efi" $?
     umount /mnt/hostlvm
     # the grub_installer is no longer needed
@@ -740,7 +740,7 @@ setup_luks_keyfile() {
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
     root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
     numberoflukskeys=$(cryptsetup luksDump /dev/"$root_part" | grep "ENABLED" | wc -l)
-    if [[ "$numberoflukskeys" -lt 2 ]] 
+    if [[ "$numberoflukskeys" -lt 2 ]]; then
         # Create a keyfile
         [[ -e /mnt/crypto_keyfile.bin ]] || dd bs=512 count=4 if=/dev/urandom of=/mnt/crypto_keyfile.bin && echo "Generating a keyfile"
         chmod 000 /mnt/crypto_keyfile.bin
@@ -753,6 +753,7 @@ setup_luks_keyfile() {
 }
 
 boot_encrypted_setting() {
+    fde=false
     # Check if there is separate /boot partition 
     if [[ $(lsblk | grep "/mnt/boot$") == "" ]]; then
         #There is no separate /boot parition
