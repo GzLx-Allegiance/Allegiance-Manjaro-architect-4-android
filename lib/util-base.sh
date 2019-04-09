@@ -506,24 +506,12 @@ install_refind()
         sed -i "s|\"$|\ $rootflag\"|g" /mnt/boot/refind_linux.conf
     fi
 
-    # LVM on LUKS  
-    if [[ $LUKS == 1 ]] && [[ $(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
-        #mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        #ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B2 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
-        #bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-        #crypt_name="$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/crypt/ {print $1}' | cut -c 3-)"
-        #sed -i "s|root=.* |cryptdevice=$bl_root:$crypt_name root=$mapper_name |g" /mnt/boot/refind_linux.conf
-        #sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+    # LUKS  
+    if [[ $LUKS == 1 ]]; then
+        mapper_name="$(mount | awk '/\/mnt / {print $1}')"
         luks_opt=$(cat /tmp/.luks_dev)
-        sed -i "s|root=.* |$luks_opt |g" /mnt/boot/refind_linux.conf
-        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf        
-    # Plain LUKS
-    elif [[ $LUKS == 1 ]]; then
-        #mapper_name="$(mount | awk '/\/mnt / {print $1}')"
-        #ROOTY_PARTY="/dev/$(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep -B1 "$root_name" | awk '/part/ {print $1}' | cut -c 3-)"
-        #bl_root="PARTUUID=$(blkid -s PARTUUID ${ROOTY_PARTY} | sed 's/.*=//g' | sed 's/"//g')"
-        luks_opt=$(cat /tmp/.luks_dev)
-        sed -i "s|root=.* |$luks_opt |g" /mnt/boot/refind_linux.conf
+        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+        sed -i "s|root=.* |$luks_opt root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
     # Figure out microcode
@@ -647,14 +635,14 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                 # If encryption used amend grub
                 if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
                     sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\\\""$(cat /tmp/.luks_dev | awk '{print $1}')\\\"~g\"" /etc/default/grub" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh && echo "adding kernel parameter $(cat /tmp/.luks_dev)"
+                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
                 # If Full disk encryption is used, use a keyfile
                 if $fde; then
-                    echo "Full disk encryption enabled"
                     sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
+                    sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
