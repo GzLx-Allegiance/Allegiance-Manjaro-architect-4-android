@@ -417,6 +417,7 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
 ln -s /hostlvm /run/lvm
 pacman -S --noconfirm --needed grub efibootmgr dosfstools grub-btrfs
 findmnt | awk '/^\/ / {print $3}' | grep -q btrfs && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
+lsblk -ino TYPE,MOUNTPOINT | grep " /$" | grep -q lvm && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=${UEFI_MOUNT} --bootloader-id=${bootid} --recheck
 pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
@@ -440,9 +441,7 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     # If Full disk encryption is used, use a keyfile
     if $fde; then
         echo "Full disk encryption enabled"
-        sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-        echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
-        echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+        sed  -i '3a\grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' ${MOUNTPOINT}/usr/bin/grub_installer.sh
     fi
     #install grub
     arch_chroot "grub_installer.sh" 2>$ERR
@@ -506,12 +505,16 @@ install_refind()
         sed -i "s|\"$|\ $rootflag\"|g" /mnt/boot/refind_linux.conf
     fi
 
-    # LUKS  
+    # LUKS and lvm with LUKS
     if [[ $LUKS == 1 ]]; then
         mapper_name="$(mount | awk '/\/mnt / {print $1}')"
         luks_opt=$(cat /tmp/.luks_dev)
-        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
         sed -i "s|root=.* |$luks_opt root=$mapper_name |g" /mnt/boot/refind_linux.conf
+        sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
+    # Lvm without LUKS
+    elif [[ $(lsblk -i | sed -r 's/^[^[:alnum:]]+//' | grep "/mnt$" | awk '{print $6}') == lvm ]]; then
+        mapper_name="$(mount | awk '/\/mnt / {print $1}')"
+        sed -i "s|root=.* |root=$mapper_name |g" /mnt/boot/refind_linux.conf
         sed -i '/Boot with minimal options/d' /mnt/boot/refind_linux.conf
     fi
     # Figure out microcode
@@ -728,7 +731,7 @@ setup_luks_keyfile() {
     root_name=$(mount | awk '/\/mnt / {print $1}' | sed s~/dev/mapper/~~g | sed s~/dev/~~g)
     root_part=$(lsblk -i | tac | sed -r 's/^[^[:alnum:]]+//' | sed -n -e "/$root_name/,/part/p" | awk '/part/ {print $1}' | tr -cd '[:alnum:]')
     numberoflukskeys=$(cryptsetup luksDump /dev/"$root_part" | grep "ENABLED" | wc -l)
-    if [[ "$numberoflukskeys" -lt 2 ]]; then
+    if [[ "$numberoflukskeys" -lt 4 ]]; then
         # Create a keyfile
         [[ -e /mnt/crypto_keyfile.bin ]] || dd bs=512 count=4 if=/dev/urandom of=/mnt/crypto_keyfile.bin && echo "Generating a keyfile"
         chmod 000 /mnt/crypto_keyfile.bin
