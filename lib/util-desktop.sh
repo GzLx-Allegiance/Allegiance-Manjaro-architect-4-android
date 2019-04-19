@@ -308,7 +308,7 @@ install_desktop() {
     filter_packages
     # remove grub
     sed -i '/grub/d' /mnt/.base
-    echo "nilfs-utils" >> /mnt/.base
+    #echo "nilfs-utils" >> /mnt/.base
     check_for_error "packages to install: $(cat /mnt/.base | sort | tr '\n' ' ')"
     clear
     set -o pipefail
@@ -354,6 +354,14 @@ install_desktop() {
             sed -e '/^HOOKS=/s/\ filesystems//g' -e '/^HOOKS=/s/\ keyboard/\ keyboard\ zfs\ filesystems/g' -e '/^HOOKS=/s/\ fsck//g' -e '/^FILES=/c\FILES=("/usr/lib/libgcc_s.so.1")' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
             check_for_error "root on zfs volume. Amend mkinitcpio."
             ;;
+        *)
+            if $FSCK_HOOK; then
+                # Remove fsck unless chosen otherwise
+                sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+                check_for_error "no fsck specified. Removing fsck hook from mkinitcpio.conf."
+            fi
+
+            ;;
     esac
 
     recheck_luks
@@ -364,6 +372,11 @@ install_desktop() {
     [[ $((LVM + LUKS)) -eq 2 ]] && { sed -i 's/block filesystems keyboard/block consolefont keymap keyboard encrypt lvm2 filesystems/g' ${MOUNTPOINT}/etc/mkinitcpio.conf 2>$ERR; check_for_error "add lvm/luks hooks" $?; }
 
     [[ $((LVM + LUKS + BTRFS_ROOT + ZFS_ROOT)) -gt 0 ]] && { arch_chroot "mkinitcpio -P" 2>$ERR; check_for_error "re-run mkinitcpio" $?; }
+
+    # Generate fstab with UUID
+    fstabgen -U -p ${MOUNTPOINT} > ${MOUNTPOINT}/etc/fstab
+    # Edit fstab in case of btrfs subvolumes
+    sed -i "s/subvolid=.*,subvol=\/.*,//g" /mnt/etc/fstab
 
     # If specified, copy over the pacman.conf file to the installation
     if [[ $COPY_PACCONF -eq 1 ]]; then

@@ -223,8 +223,8 @@ prep_menu() {
     local PARENT="$FUNCNAME"
     declare -i loopmenu=1
     while ((loopmenu)); do
-        submenu 11
-        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 20 60 11 \
+        submenu 13
+        DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 0 0 0 \
           "1" "$_VCKeymapTitle" \
           "2" "$_DevShowOpt" \
           "3" "$_PrepPartDisk|>" \
@@ -235,7 +235,8 @@ prep_menu() {
           "8" "$_PrepMirror|>" \
           "9" "$_PrepPacKey" \
           "10" "$_HostCache" \
-          "11" "$_Back" 2>${ANSWER}
+          "11" "Enable fsck hook" \
+          "12" "$_Back" 2>${ANSWER}
         HIGHLIGHT_SUB=$(cat ${ANSWER})
 
         case $(cat ${ANSWER}) in
@@ -270,6 +271,8 @@ prep_menu() {
                  ;;
             "10") set_cache
                  ;;
+            "11") set_fsck_hook
+                 ;;
             *) loopmenu=0
                 return 0
                  ;;
@@ -277,6 +280,16 @@ prep_menu() {
     done
 }
 
+# Fsck hook
+
+set_fsck_hook() {
+    DIALOG " Set fsck hook " --yesno "\nDo you want to use fsck hook?\n " 0 0
+    if [[ $? -eq 0 ]]; then
+      FSCK_HOOK=true
+    else
+      FSCK_HOOK=false
+    fi
+}
 # Base Installation
 install_base_menu() {
     local PARENT="$FUNCNAME"

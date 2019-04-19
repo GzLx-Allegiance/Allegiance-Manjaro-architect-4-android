@@ -48,9 +48,13 @@ enable_services() {
 
             # enable display manager for systemd
             if [[ "$(cat /tmp/.display-manager)" == lightdm ]]; then
-                set_lightdm_greeter
-                arch_chroot "systemctl enable lightdm" 2>$ERR
-                check_for_error "enable lightdm" "$?"
+                if arch_chroot "pacman -Qq lightdm > /dev/null"; then
+                    set_lightdm_greeter
+                    arch_chroot "systemctl enable lightdm" 2>$ERR
+                    check_for_error "enable lightdm" "$?"
+                else
+                    echo "lightdm was listed but not actually installed. No display-manager was enabled"
+                fi
             elif [[ "$(cat /tmp/.display-manager)" == sddm ]]; then
                 arch_chroot "systemctl enable sddm" 2>$ERR
                 check_for_error "enable sddm" "$?"
@@ -380,11 +384,7 @@ install_grub_uefi() {
     else
         bootid="manjaro"
     fi
-    # For quiet grub, remove fsck
-    if grep "^HOOKS"  ${MOUNTPOINT}/etc/mkinitcpio.conf | grep -q fsck; then
-        sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
-        arch_chroot "mkinitcpio -P" 
-    fi
+    
     clear
     mkdir /mnt/hostlvm
     mount --bind /run/lvm /mnt/hostlvm
@@ -495,7 +495,7 @@ install_refind()
             ;;
     esac
     # Mount as rw
-    sed -i 's/ro\ /rw\ \ /g' /mnt/boot/refind_linux.conf
+    #sed -i 's/ro\ /rw\ \ /g' /mnt/boot/refind_linux.conf
 
     # Boot in graphics mode 
     sed -i -e '/use_graphics_for/ s/^#*//' ${MOUNTPOINT}${UEFI_MOUNT}/EFI/refind/refind.conf
