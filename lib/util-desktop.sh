@@ -226,8 +226,8 @@ install_manjaro_de_wm() {
         echo ""
         echo ""
         echo ""
-        echo "press Enter to continue"
-        read
+        #echo "press Enter to continue"
+        #read
         # Clear the packages file for installation of "common" packages
         echo "" > ${PACKAGES}
 

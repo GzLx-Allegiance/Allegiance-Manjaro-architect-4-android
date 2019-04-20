@@ -498,10 +498,11 @@ luks_menu() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         LUKS_OPT=""
-        DIALOG " $_PrepLUKS " --menu "\n$_LuksMenuBody\n$_LuksMenuBody2\n$_LuksMenuBody3\n " 25 60 4 \
+        DIALOG " $_PrepLUKS " --menu "\n$_LuksMenuBody\n$_LuksMenuBody2\n$_LuksMenuBody3\n " 0 0 0 \
           "$_LuksOpen" "cryptsetup open --type luks" \
           "$_LuksEncrypt" "cryptsetup -q luksFormat" \
           "$_LuksEncryptAdv" "cryptsetup -q -s -c luksFormat" \
+          "Express LUKS" "cryptsetup -q -s --pbkdf-force-iterations 200000 -c luksFormat" \
           "$_Back" "-" 2>${ANSWER}
 
         case $(cat ${ANSWER}) in
@@ -510,6 +511,8 @@ luks_menu() {
             "$_LuksEncrypt") luks_setup && luks_default && luks_show
                 ;;
             "$_LuksEncryptAdv") luks_setup && luks_key_define && luks_show
+                ;;
+            "Express LUKS") luks_setup && luks_express && luks_show
                 ;;
             *) loopmenu=0
                return 0
@@ -592,6 +595,18 @@ luks_default() {
     DIALOG " $_LuksEncrypt " --infobox "\n$_PlsWaitBody\n " 0 0
     sleep 2
     echo $PASSWD | cryptsetup -q --type luks1 luksFormat ${PARTITION} 2>$ERR
+    check_for_error "luksFormat ${PARTITION}" $?
+
+    # Now open the encrypted partition or LV
+    echo $PASSWD | cryptsetup open ${PARTITION} ${LUKS_ROOT_NAME} 2>$ERR
+    check_for_error "open ${PARTITION} ${LUKS_ROOT_NAME}" $?
+}
+
+luks_express() {
+    # Encrypt selected partition or LV with credentials given
+    DIALOG " $_LuksEncrypt " --infobox "\n$_PlsWaitBody\n " 0 0
+    sleep 2
+    echo $PASSWD | cryptsetup -q --pbkdf-force-iterations 200000 --type luks1 luksFormat ${PARTITION} 2>$ERR
     check_for_error "luksFormat ${PARTITION}" $?
 
     # Now open the encrypted partition or LV

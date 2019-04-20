@@ -48,7 +48,7 @@ enable_services() {
 
             # enable display manager for systemd
             if [[ "$(cat /tmp/.display-manager)" == lightdm ]]; then
-                if arch_chroot "pacman -Qq lightdm > /dev/null"; then
+                if arch_chroot "pacman -Qq lightdm" > /dev/null; then
                     set_lightdm_greeter
                     arch_chroot "systemctl enable lightdm" 2>$ERR
                     check_for_error "enable lightdm" "$?"
@@ -736,7 +736,7 @@ setup_luks_keyfile() {
         [[ -e /mnt/crypto_keyfile.bin ]] || dd bs=512 count=4 if=/dev/urandom of=/mnt/crypto_keyfile.bin && echo "Generating a keyfile"
         chmod 000 /mnt/crypto_keyfile.bin
         echo "Adding the keyfile to the LUKS configuration"
-        cryptsetup luksAddKey /dev/"$root_part" /mnt/crypto_keyfile.bin || echo "Something vent wrong with adding the LUKS key. Is /dev/$root_part the right partition?"
+        cryptsetup --pbkdf-force-iterations 200000 luksAddKey /dev/"$root_part" /mnt/crypto_keyfile.bin || echo "Something vent wrong with adding the LUKS key. Is /dev/$root_part the right partition?"
         # Add keyfile to initcpio
         grep -q '/crypto_keyfile.bin' /mnt/etc/mkinitcpio.conf || sed -i '/FILES/ s~)~/crypto_keyfile.bin)~' /mnt/etc/mkinitcpio.conf && echo "Adding keyfile to the initcpio"
         arch_chroot "mkinitcpio -P"
