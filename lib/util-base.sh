@@ -299,6 +299,14 @@ install_base() {
             sed -e '/^HOOKS=/s/\ filesystems//g' -e '/^HOOKS=/s/\ keyboard/\ keyboard\ zfs\ filesystems/g' -e '/^HOOKS=/s/\ fsck//g' -e '/^FILES=/c\FILES=("/usr/lib/libgcc_s.so.1")' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
             check_for_error "root on zfs volume. Amend mkinitcpio."
             ;;
+        *)
+            if $FSCK_HOOK; then
+                # Remove fsck unless chosen otherwise
+                sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
+                check_for_error "no fsck specified. Removing fsck hook from mkinitcpio.conf."
+            fi
+
+            ;;
     esac
 
     recheck_luks
@@ -447,6 +455,7 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
     arch_chroot "grub_installer.sh" 2>$ERR
     check_for_error "grub-install --target=x86_64-efi" $?
     umount /mnt/hostlvm
+    rmdir /mnt/hostlvm
     # the grub_installer is no longer needed
     [[ -f ${MOUNTPOINT}/usr/bin/grub_installer.sh ]] && rm ${MOUNTPOINT}/usr/bin/grub_installer.sh
             
@@ -628,6 +637,7 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                     echo -e "# "'!'"/bin/bash
 ln -s /hostlvm /run/lvm
 pacman -S --noconfirm --needed grub os-prober grub-btrfs
+findmnt | awk '/^\/ / {print $3}' | grep -q btrfs && sed -e '/GRUB_SAVEDEFAULT/ s/^#*/#/' -i /etc/default/grub
 grub-install --target=i386-pc --recheck $DEVICE
 pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
@@ -638,15 +648,13 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
                 # If encryption used amend grub
                 if [[ $(cat /tmp/.luks_dev) != "" ]]; then 
                     sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\"$(cat /tmp/.luks_dev)\"~g" /etc/default/grub\" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "sed -i \"s~GRUB_CMDLINE_LINUX=.*~GRUB_CMDLINE_LINUX=\\\""$(cat /tmp/.luks_dev | awk '{print $1}')\\\"~g\"" /etc/default/grub" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh && echo "adding kernel parameter $(cat /tmp/.luks_dev)"
                     echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
                 # If Full disk encryption is used, use a keyfile
                 if $fde; then
-                    sed -i '/noconfirm grub-theme-manjaro/d' ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo 'grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || \
-                    sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
-                    echo "pacman -S --noconfirm grub-theme-manjaro" >> ${MOUNTPOINT}/usr/bin/grub_installer.sh
+                    echo "Full disk encryption enabled"
+                    sed  -i '3a\grep -q "^GRUB_ENABLE_CRYPTODISK=y" /etc/default/grub || sed -i "s/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub' ${MOUNTPOINT}/usr/bin/grub_installer.sh
                 fi
 
                 # Remove os-prober if not selected
@@ -669,11 +677,6 @@ pacman -S --noconfirm grub-theme-manjaro" > ${MOUNTPOINT}/usr/bin/grub_installer
 
                 #basestrap ${MOUNTPOINT} grub-theme-manjaro 2>$ERR
                 check_for_error "$FUNCNAME grub" $?
-                # For quiet grub, remove fsck
-                if grep "^HOOKS"  ${MOUNTPOINT}/etc/mkinitcpio.conf | grep -q fsck; then
-                    sed -e '/^HOOKS=/s/\ fsck//g' -i ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    arch_chroot "mkinitcpio -P" 
-                fi
             fi
             umount /mnt/hostlvm
             rmdir /mnt/hostlvm

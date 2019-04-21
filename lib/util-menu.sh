@@ -285,9 +285,9 @@ prep_menu() {
 set_fsck_hook() {
     DIALOG " Set fsck hook " --yesno "\nDo you want to use fsck hook?\n " 0 0
     if [[ $? -eq 0 ]]; then
-      FSCK_HOOK=true
-    else
       FSCK_HOOK=false
+    else
+      FSCK_HOOK=true
     fi
 }
 # Base Installation
