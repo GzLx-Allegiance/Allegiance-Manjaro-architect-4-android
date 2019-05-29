@@ -277,23 +277,24 @@ install_desktop() {
         fi
     done
 
-    local zfs_is_checked
-    [[ $ZFS == 1 ]] && zfs_is_checked="on" || zfs_is_checked="off"
+#    local zfs_is_checked
+#    [[ $ZFS == 1 ]] && zfs_is_checked="on" || zfs_is_checked="off"
 
     # Choose wanted kernel modules
-    DIALOG " $_ChsAddPkgs " --checklist "\n$_UseSpaceBar\n " 0 0 12 \
-      "KERNEL-headers" "-" off \
-      "KERNEL-acpi_call" "-" off \
-      "KERNEL-ndiswrapper" "-" off \
-      "KERNEL-broadcom-wl" "-" off \
-      "KERNEL-r8168" "-" off \
-      "KERNEL-rt3562sta" "-" off \
-      "KERNEL-tp_smapi" "-" off \
-      "KERNEL-vhba-module" "-" off \
-      "KERNEL-virtualbox-guest-modules" "-" off \
-      "KERNEL-virtualbox-host-modules" "-" off \
-      "KERNEL-spl" "-" $zfs_is_checked \
-      "KERNEL-zfs" "-" $zfs_is_checked 2>/tmp/.modules || return 0
+    # DIALOG " $_ChsAddPkgs " --checklist "\n$_UseSpaceBar\n " 0 0 12 \
+    #   "KERNEL-headers" "-" off \
+    #   "KERNEL-acpi_call" "-" off \
+    #   "KERNEL-ndiswrapper" "-" off \
+    #   "KERNEL-broadcom-wl" "-" off \
+    #   "KERNEL-r8168" "-" off \
+    #   "KERNEL-rt3562sta" "-" off \
+    #   "KERNEL-tp_smapi" "-" off \
+    #   "KERNEL-vhba-module" "-" off \
+    #   "KERNEL-virtualbox-guest-modules" "-" off \
+    #   "KERNEL-virtualbox-host-modules" "-" off \
+    #   "KERNEL-spl" "-" $zfs_is_checked \
+    #   "KERNEL-zfs" "-" $zfs_is_checked 2>/tmp/.modules || return 0
+      setup_modules
 
     if [[ $(cat /tmp/.modules) != "" ]]; then
         check_for_error "modules: $(cat /tmp/.modules)"
@@ -312,6 +313,9 @@ install_desktop() {
     check_for_error "packages to install: $(cat /mnt/.base | sort | tr '\n' ' ')"
     clear
     set -o pipefail
+    if ! $EDIT_PKGS; then
+        nano /mnt/.base
+    fi
     if $hostcache; then
         basestrap ${MOUNTPOINT} $(cat /mnt/.base) 2>$ERR |& tee /tmp/basestrap.log
     else
@@ -445,10 +449,10 @@ choose_mjr_desk() {
         echo $displaymanager > /tmp/.display-manager
 
         cat $(echo $PROFILES/*/$(cat /tmp/.desktop)/Packages-Desktop) > /mnt/.desktop
-		echo "" >> /mnt/.desktop
+        echo "" >> /mnt/.desktop
         DIALOG " $_ExtraPkgTitle " --yesno "\n$_ExtraPkgBody \n " 0 0 && \
-        echo "$(pacman -Ssq) $(pacman -Sg)" | fzf -m -e --header="$_AddPkgs" --prompt="$_AddPkgsPrmpt > " --reverse >> /mnt/.desktop
-    
+        echo "$(pacman -Ssq) $(pacman -Sg)" | fzf -m -e --header="$_AddPkgs" --prompt="$_AddPkgsPrmpt > " --reverse >> /mnt/.desktop && EDIT_PKGS=false
+        
     fi
 }
 
@@ -477,4 +481,38 @@ set_sddm_ck() {
       -i "/mnt/etc/sddm.conf"
     arch_chroot "gpasswd -a sddm video" 2>$ERR
     check_for_error "$FUNCNAME" $?
+}
+
+setup_modules() {
+
+        echo "KERNEL-headers"  >> /tmp/.modules 
+    if lsusb | grep -q "0bda:b720"; then
+         # For realtek wifi card
+         echo "KERNEL-rtl8723bu" >> /tmp/.modules
+    fi
+
+    if systemd-detect-virt | grep -q "oracle"; then
+         # For virtualbox
+         echo "KERNEL-virtualbox-guest-modules" >> /tmp/.modules
+    fi 
+
+    if dmidecode -t system | grep -q -i "ThinkPad"; then
+        # For thinkpads
+        echo "KERNEL-tp_smapi" >> /tmp/.modules
+    fi
+
+    if lspci | grep -i -q broadcom; then
+        # For broadcom  wifi card
+        echo "KERNEL-broadcom-wl" >> /tmp/.modules
+    fi
+    
+    if lspci | grep -i -q ralink; then
+        # For ralink  wifi card
+        echo "KERNEL-rt3562sta" >> /tmp/.modules
+    fi
+
+    if findmnt | grep -q "zfs"; then
+        # For zfs systems
+        echo "KERNEL-zfs" >> /tmp/.modules
+    fi
 }

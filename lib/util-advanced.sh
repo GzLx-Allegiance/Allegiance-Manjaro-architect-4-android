@@ -674,7 +674,7 @@ if DIALOG " Hibernation setup " --yesno "\nAre you sure you want to enable hiber
   if ! [[ -e /mnt/etc/fstab ]]; then
     generate_fstab
   fi
-  inst_needed "hibernator"
+  basestrap ${MOUNTPOINT} hibernator
   arch_chroot "hibernator" 2>$ERR
   check_for_error "Running hibernator" $?
   [[ $? == 0 ]] && DIALOG " Hibernation setup " --infobox "\nHibernator was successfully run \n " 0 0
