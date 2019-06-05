@@ -214,6 +214,7 @@ _XkbmapBody="Seleziona la disposizione della testiera."
 
 # Impostazione Localizzazione
 _localeBody="I Locales determinano la lingua mostrata, i formati di data e ora, ecc.\n\nIl formato è lingua_NAZIONE (en_US per l'inglese, Sati Uniti; en_GB per inglese, Gran Bretagna)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Impostazione fuso orario
 _TimeZBody="Il fuso orario è utilizzato per impostare correttamente l'ora del sistema."
@@ -420,6 +421,7 @@ _ConfBseFstab="Genera FSTAB"
 _ConfBseHost="Imposta Hostname"
 _ConfBseTimeHC="Imposta Timezone e Data/Ora"
 _ConfBseSysLoc="Imposta il linguaggio del sistema"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Eseguire Mkinitcpio"
 _RunUpGrub="Update GRUB" 
                            

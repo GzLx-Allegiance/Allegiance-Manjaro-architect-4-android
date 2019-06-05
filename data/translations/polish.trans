@@ -212,6 +212,7 @@ _XkbmapBody="Wybierz mapowanie klawiszy dla środowiska graficznego."
 
 # Set Locale
 _localeBody="Lokalizacje określają wyświetlane języki, godziny, daty, itd.\n\nStosowany format to język_KRAJ (na przykład en_US to angielski, Stany Zjednoczone; en_GB to angielski, Wielka Brytania)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Strefa czasowa służy do prawidłowego ustawienia zegara systemowego."
@@ -419,6 +420,7 @@ _ConfBseFstab="Generuj FSTAB"
 _ConfBseHost="Ustaw nazwę hosta"
 _ConfBseTimeHC="Ustaw datę i czas"
 _ConfBseSysLoc="Ustal lokalizację systemu"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Uruchom Mkinitcpio"
 _RunUpGrub="Zaktualizuj GRUB"
 

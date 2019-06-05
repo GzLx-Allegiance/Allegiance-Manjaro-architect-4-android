@@ -214,6 +214,7 @@ _XkbmapBody="Налаштувати розкладку середовища ст
 
 # Set Locale
 _localeBody="Локалі визначають відображені мови, формати дати та час, и т.д.\n\nМає наступний формат: мова_КРАЇНА (напр. en_US - англійський, Сполучені Штати; en_GB - англійский, Велика Британія)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Часовий пояс використовується для коректної установки системного часу."
@@ -420,6 +421,7 @@ _ConfBseFstab="Згенерувати FSTAB"
 _ConfBseHost="Встановити ім'я хоста"
 _ConfBseTimeHC="Налаштувати часовий пояс та час"
 _ConfBseSysLoc="Встановити мову системи"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Запустити Mkinitcpio"
 _RunUpGrub="Оновлення GRUB"
 

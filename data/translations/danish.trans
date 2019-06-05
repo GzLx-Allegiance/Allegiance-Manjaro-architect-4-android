@@ -215,6 +215,7 @@ _XkbmapBody="Vælg Skrivebord Tastatur Layout"
 
 # Set Locale
 _localeBody="Region bruges til afgøre hvilket sprog der bruges, tid og dato formater mm.\n\nFormatet er sprog_LAND (f.eks. da_DK er dansk, Danmark; en_DK engelsk, Danmark)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Tidszone bruges til at vise dit systems ur"
@@ -421,6 +422,7 @@ _ConfBseFstab="Opret FSTAB"
 _ConfBseHost="Opsæt Computernavn"
 _ConfBseTimeHC="Opsæt Tidszone og Ur"
 _ConfBseSysLoc="Opsæt Systemsprog"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Kør Mkinitcpio"
 _RunUpGrub="Opdater GRUB"
 

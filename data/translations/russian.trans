@@ -217,6 +217,7 @@ _XkbmapBody="Настроить раскладку среды рабочего �
 
 # Set Locale
 _localeBody="Локаль определяет отображаемый язык, форматы даты и времени, и т.д.\n\nИмеет следующий формат: язык_СТРАНА (напр. en_US - английский, Соединенные Штаты; en_GB - английский, Великобритания)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Часовой пояс используется для корректной установки системного времени."
@@ -423,6 +424,7 @@ _ConfBseFstab="Сгенерировать FSTAB"
 _ConfBseHost="Установить имя хоста"
 _ConfBseTimeHC="Настроить часовой пояс и время"
 _ConfBseSysLoc="Установить язык системы"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Запустить Mkinitcpio"
 _RunUpGrub="Обновление GRUB"
 

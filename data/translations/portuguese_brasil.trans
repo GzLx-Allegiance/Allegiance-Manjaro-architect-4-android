@@ -214,6 +214,7 @@ _XkbmapBody="Selecionar layout de teclado do ambiente de desktop."
 
 # Definir Local
 _localeBody="A localização (locale) determina o idioma a ser exibido, os formatos de data e hora, etc...\n\nO formato é idioma_PAÍS (ex.: en_US é inglês, Estados Unidos; pt_BR é português, Brasil)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Definir fuso horário
 _TimeZBody="O fuso horário é usado para definir corretamente o relógio do sistema."
@@ -421,6 +422,7 @@ _ConfBseFstab="Gerar FSTAB"
 _ConfBseHost="Definir nome da máquina"
 _ConfBseTimeHC="Definir fuso horário e Relógio"
 _ConfBseSysLoc="Definir a localização do sistema"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Executar mkinitcpio"
 _RunUpGrub="Atualizar GRUB"
 

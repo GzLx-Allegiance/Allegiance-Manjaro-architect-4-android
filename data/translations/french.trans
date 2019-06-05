@@ -216,6 +216,7 @@ _XkbmapBody="Sélectionner l'agencement de l'environnement de bureau."
 
 # Définir les paramètres régionaux
 _localeBody="Les locales déterminent les langages affichées, les formats de date et heure, etc....\n\nLe format de langue se présente ainsi : langage_PAYS (ex : fr_FR pour la France ; fr_BE pour la Belgique ; fr_CA pour le Canada ; fr_LU pour le Luxembourg, etc...)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Définir le fuseau horaire
 _TimeZBody="Le fuseau horaire est utilisé pour configurer correctement votre horloge système."
@@ -423,6 +424,7 @@ _ConfBseFstab="Générer FSTAB"
 _ConfBseHost="Définir le nom d'hôte"
 _ConfBseTimeHC="Définir l'heure et le fuseau horaire"
 _ConfBseSysLoc="Définir les paramètres régionaux"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Exécuter Mkinitcpio"
 _RunUpGrub="Mettre à jour GRUB"
 

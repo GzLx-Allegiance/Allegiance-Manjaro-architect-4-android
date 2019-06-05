@@ -212,6 +212,7 @@ _XkbmapBody="Wählen Sie das Tastaturlayout für die Desktop-Umgebung."
 
 # Set Locale
 _localeBody="Die Locale bestimmt die angezeigte Sprache, Zeit-, Datum-, Zahlen-Format etc.\n\nDas Format ist nach dem Schema sprache_LAND (z.B. de_DE ist Deutsch, Deutschland; de_AT ist Deutsch, Österreich)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Die Zeitzone wird genutzt, um die System-Uhr korrekt einzustellen."
@@ -418,6 +419,7 @@ _ConfBseFstab="Generate FSTAB" # translate me !
 _ConfBseHost="Set Hostname" # translate me !
 _ConfBseTimeHC="Set Timezone and Clock" # translate me !
 _ConfBseSysLoc="Set System Locale" # translate me !
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Run Mkinitcpio" # translate me !
 _RunUpGrub="GRUB aktualisieren"
 

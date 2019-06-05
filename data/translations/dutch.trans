@@ -213,6 +213,7 @@ _XkbmapBody="Selecteer de toetsenbordindeling voor Desktop Suite."
 
 # Stel de systeemtaal in
 _localeBody="Landinstellingen bepalen welke talen en hoe tijd en datum enz... worden weergegeven.\n\nHet formaat is taal_LAND (bijvoorbeeld nl_BE is nederlands, België; en_GB is engels, Groot-Brittannië)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Stel de tijdzone in
 _TimeZBody="Aan de hand van de tijdzone wordt uw systeemklok correct ingesteld."
@@ -419,6 +420,7 @@ _ConfBseFstab="Genereer FSTAB"
 _ConfBseHost="Stel Host-naam in"
 _ConfBseTimeHC="Stel Tijdzone en klok in"
 _ConfBseSysLoc="Stel de Systeemtaal in"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Voer Mkinitcpio uit"
 _RunUpGrub="Update GRUB"
 

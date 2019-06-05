@@ -213,6 +213,7 @@ _XkbmapBody="Válaszd ki az asztali környezet billentyűzetkiosztását."
 
 # Helyi nyelv beállítása
 _localeBody="A helyi nyelv határozza meg többek között a megjelenítendő nyelvet és az idő/dátum formátumot.\n\nA formátum a következő: nyelv_ORSZÁG (pl. en_US az amerikai angol, hu_HU a magyar)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Időzóna beállítása
 _TimeZBody="Az időzóna beállítása lehetővé teszi a rendszeróra helyes beállítását."
@@ -420,6 +421,7 @@ _ConfBseFstab="FSTAB generálása"
 _ConfBseHost="Gépnév beállítása"
 _ConfBseTimeHC="Időzóna és óra beállítása"
 _ConfBseSysLoc="Helyi nyelv beállítása"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Mkinitcpio futtatása"
 _RunUpGrub="A Grub (rendszertöltő) frissítése"                            
 

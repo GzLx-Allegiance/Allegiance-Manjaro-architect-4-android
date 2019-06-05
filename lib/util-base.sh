@@ -835,13 +835,27 @@ set_locale() {
         LOCALES="${LOCALES} ${i} -"
     done
 
-    DIALOG " $_ConfBseSysLoc " --menu "\n$_localeBody\n " 0 0 12 ${LOCALES} 2>${ANSWER} || return 0
+    # Set the system language 
+    DIALOG " $_ConfBseSysLang " --default-item "${CURR_LOCALE}" --menu "\n$_langBody\n " 0 0 12 ${LOCALES} 2>${ANSWER} || return 0
 
     LOCALE=$(cat ${ANSWER})
-
     echo "LANG=\"${LOCALE}\"" > ${MOUNTPOINT}/etc/locale.conf
+    echo "LC_MESSAGES=\"${LOCALE}\"" >> ${MOUNTPOINT}/etc/locale.conf
     sed -i "s/#${LOCALE}/${LOCALE}/" ${MOUNTPOINT}/etc/locale.gen 2>$ERR
+    # Set system measurements
+    DIALOG " $_ConfBseSysLoc " --default-item "${LOCALE}" --menu "\n$_localeBody\n " 0 0 12 ${LOCALES} 2>${ANSWER} || return 0
+
+    LOCALE2=$(cat ${ANSWER})
+    echo "LC_MONETARY=\"${LOCALE2}\"" >> ${MOUNTPOINT}/etc/locale.conf
+    echo "LC_PAPER=\"${LOCALE2}\"" >> ${MOUNTPOINT}/etc/locale.conf
+    echo "LC_MEASUREMENT=\"${LOCALE2}\"" >> ${MOUNTPOINT}/etc/locale.conf
+    echo "LC_ADDRESS=\"${LOCALE2}\"" >> ${MOUNTPOINT}/etc/locale.conf
+    echo "LC_TIME=\"${LOCALE2}\"" >> ${MOUNTPOINT}/etc/locale.conf
+    sed -i "s/#${LOCALE2}/${LOCALE2}/" ${MOUNTPOINT}/etc/locale.gen 2>$ERR
+
+    # Generate locales
     arch_chroot "locale-gen" >/dev/null 2>$ERR &
+
     check_for_error "$FUNCNAME" "$?"
     ini linux.locale "$LOCALE"
 

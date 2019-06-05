@@ -213,6 +213,7 @@ _XkbmapBody="Seleccionar distribución de teclado del entorno de escritorio."
 
 # Seleccionar localización
 _localeBody="La localización (locale) determina los idiomas para mostrar, los formatos de fecha y hora, etc.\n\nEl formato es idioma_PAÍS (e.g es_ES significa español, España; es_MX significa español, México)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Establecer zona horaria
 _TimeZBody="La zona horaria es usada para ajustar el reloj del sistema correctamente."
@@ -419,6 +420,7 @@ _ConfBseFstab="Generar FSTAB"
 _ConfBseHost="Establecer nombre del equipo"
 _ConfBseTimeHC="Establecer zona horaria y reloj"
 _ConfBseSysLoc="Establecer idioma del sistema"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Ejecutar Mkinitcpio"
 _RunUpGrub="Actualizar GRUB"
 

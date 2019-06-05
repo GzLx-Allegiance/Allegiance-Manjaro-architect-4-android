@@ -26,7 +26,8 @@ _Change="Change"
 _NoCon="No Internet Detected."
 _EstCon="Establish connection?"
 _Config="Configure"
-_ApplySet="Apply language settings ..."
+_ApplySet="Apply 
+uage settings ..."
 _ChMenu="Select Menu"
 _ChMenuBody="The Regular Menu will guide you through the installation of a pre-configured Manjaro Environment with some additional choices.\n\nThe Advanced Menu can be used to install unconfigured desktops or Manjaro development profiles and also includes an additional selection of network and multimedia applications and some advanced options for system and security configuration."
 
@@ -211,7 +212,8 @@ _VCKeymapBody="A virtual console is a shell prompt in a non-graphical environmen
 _XkbmapBody="Select Desktop Environment Keymap."
 
 # Set Locale
-_localeBody="Locales determine the languages displayed, time and date formats, etc.\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)."
+_localeBody="Locales determine the time and date formats, etc.\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)."
 
 # Set Timezone
 _TimeZBody="The time zone is used to correctly set your system clock."
@@ -419,6 +421,7 @@ _ConfBseFstab="Generate FSTAB"
 _ConfBseHost="Set Hostname"
 _ConfBseTimeHC="Set Timezone and Clock"
 _ConfBseSysLoc="Set System Locale"
+_ConfBseSysLang="Set System Language"
 _RunMkinit="Run Mkinitcpio"
 _RunUpGrub="Update GRUB"
 

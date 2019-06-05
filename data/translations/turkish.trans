@@ -164,6 +164,7 @@ _XkbmapBody="Masaüstü Ortamı için klavye düzeni seçin."
 
 # Set Locale
 _localeBody="Yerel ayarlar, görüntülenen dilleri, saat ve tarih biçimlerini vb. belirler.\n\nFormatı şu şekildedir dil_ÜLKE (örn. tr_TR, en_US, en_GB)."
+_langBody="Choose the system language. English is recommended for easier troubleshooting\n\nThe format is language_COUNTRY (e.g. en_US is english, United States; en_GB is english, Great Britain)." #translate me!
 
 # Set Timezone
 _TimeZBody="Saat dilimi, sistem saatinizi doğru ayarlamak için kullanılır."
@@ -371,6 +372,7 @@ _ConfBseFstab="FSTAB Oluştur"
 _ConfBseHost="Bilgisayar Adı Tanımla"
 _ConfBseTimeHC="Saat Dilimi ve Saati Ayarla"
 _ConfBseSysLoc="Sistem Yerel Ayarı Ayarla"
+_ConfBseSysLang="Set System Language" #translate me!
 _RunMkinit="Mkinitcpio Çalıştır"
 _RunUpGrub="GRUB Güncelle"
 
