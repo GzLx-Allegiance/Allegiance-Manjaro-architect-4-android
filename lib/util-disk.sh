@@ -134,18 +134,6 @@ find_partitions() {
     partition_list=$(lsblk -lno NAME,SIZE,TYPE | grep $INCLUDE_PART | sed 's/part$/\/dev\//g' | sed 's/lvm$\|crypt$/\/dev\/mapper\//g' | \
     awk '{print $3$1 " " $2}' | awk '!/mapper/{a[++i]=$0;next}1;END{while(x<length(a))print a[++x]}' ; zfs list -Ht volume -o name,volsize 2>/dev/null | awk '{printf "/dev/zvol/%s %s\n", $1, $2}')
 
-    # create a raid partition list
-    old_ifs="$IFS"
-    IFS=$'\n'
-    raid_partitions=($(lsblk -lno NAME,SIZE,TYPE | grep raid | awk '{print $1,$2}' | uniq))
-    IFS="$old_ifs"
-
-    # add raid partitions to partition_list
-    for i in "${raid_partitions[@]}"
-    do
-        partition_list="${partition_list} /dev/md/${i}"
-    done
-    
     for i in ${partition_list}; do
         PARTITIONS="${PARTITIONS} ${i}"
         NUMBER_PARTITIONS=$(( NUMBER_PARTITIONS + 1 ))
@@ -504,93 +492,6 @@ make_swap() {
         fi
     fi
     ini mount.swap "${PARTITION}"
-}
-
-raid_level_menu() {
-    declare -i loopmenu=1
-    while ((loopmenu)); do
-        RAID_OPT=""
-        DIALOG "RAID" --menu "\n$_RAIDLevelTitle\n" 20 75 6 \
-	    "0" "$_RAIDLevel0" \
-        "1" "$_RAIDLevel1" \
-        "5" "$_RAIDLevel5" \
-        "6" "$_RAIDLevel6" \
-        "10" "$_RAIDLevel10" \
-        "$_Back" "-" 2>${ANSWER}
-
-        case $(cat ${ANSWER}) in
-            "0") raid_array_menu 0
-                ;;
-            "1") raid_array_menu 1 
-                ;;
-            "5") raid_array_menu 5
-                ;; 
-            "6") raid_array_menu 6
-                ;;
-	        "10") raid_array_menu 10
-		        ;;
-            *) loopmenu=0
-               return 0
-                ;;
-        esac
-    done
-}
-
-raid_create() {
-
-    RAID_DEVICES=${1}
-    RAID_DEVICE_NUMBER=$(echo ${1} | wc -w)
-    RAID_LEVEL=${2}
-    RAID_DEVICE_NAME=${3}
-
-    # creates the array
-    mdadm --create --level=${RAID_LEVEL} --metadata=1.2 --raid-devices=${RAID_DEVICE_NUMBER} /dev/md/${RAID_DEVICE_NAME} ${RAID_DEVICES}  
-        
-    # array is disassembled and reassembled to prevent the array from being named /dev/md/md127
-    # the check of /etc/mdadm.conf is preformed to prevent the user from adding duplicate entries
-    if [[ $(cat /etc/mdadm.conf | grep "/dev/md/${RAID_DEVICE_NAME}" | wc -l) == 0 ]]; then
-        mdadm --detail --scan | grep -e "/dev/md/${RAID_DEVICE_NAME}" -e "/dev/md/md127" >> /etc/mdadm.conf
-        mdadm --stop /dev/md/${RAID_DEVICE_NAME}
-        mdadm --assemble --scan
-    fi
-    
-    DIALOG "$__ArrayCreatedTitle" --msgbox "\n$_ArrayCreatedDescription\n\nmdadm --create --level=${RAID_LEVEL} --metadata=1.2 --raid-devices=${RAID_DEVICE_NUMBER} /dev/md/${RAID_DEVICE_NAME} ${RAID_DEVICES}\n" 0 0
-
-}
-
-raid_get_array_name() {
-
-    DIALOG "$_DeviceNameTitle" --inputbox "\n$_DeviceNameDescription\n\n$_DeviceNamePrefixWarning\n" 0 0 2>${ANSWER}
-
-    raid_device_name=$(cat ${ANSWER})
-    
-    if [[ ${raid_device_name} != "" ]]; then
-        raid_create "${1}" ${2} ${raid_device_name}
-    fi
-    
-}
-
-raid_array_menu() {
-
-    # find raid partitions.
-    INCLUDE_PART='part\|crypt'
-    umount_partitions
-    find_partitions
-    
-    # Amend partition(s) found for use in check list
-    PARTITIONS=$(echo $PARTITIONS | sed 's/M\|G\|T/& off/g')
-    RAID_LEVEL=${1}
-    
-    # select partitions for the array
-    echo "" > $ANSWER
-    while [[ $(cat ${ANSWER}) == "" ]]; do
-        DIALOG "$_PartitionSelectTitle" --checklist "\n$__PartitionSelectDescription\n\n$_UseSpaceBar\n " 0 0 12 ${PARTITIONS} 2> ${ANSWER} 
-    done
-    
-    ANSWERS=$(cat ${ANSWER})
-
-    raid_get_array_name "${ANSWERS[@]}" ${RAID_LEVEL}
-    
 }
 
 luks_menu() {

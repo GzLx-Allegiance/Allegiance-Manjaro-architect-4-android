@@ -367,68 +367,7 @@ install_desktop() {
 
             ;;
     esac
-    
-    
-    # check to see if raid is needed for boot
-    # if mount point is on raid then it is needed
-    if [[ $(lsblk -lno TYPE,MOUNTPOINT | grep -E "raid.*${MOUNTPOINT}" | wc -l)> 0 ]]; then
-        raid_needed=true
-        
-    # put all the lines of lsblk, before the mountpoint, into an array
-    # iterate through the array backwards util a partition is reached
-    # if raid was involved anywere between the mountpoint and partition, 
-    # then inital ramdisk configuration for raid is need
-    else
-    
-        old_ifs="$IFS"
-        IFS=$'\n'
-        lsblk_lines=($(lsblk -lno TYPE,NAME,MOUNTPOINT | sed  "/\/${MOUNTPOINT:1}$/q"))
-        IFS="$old_ifs"
-        
-        for (( i=${#lsblk_lines[@]}-1 ; i>=0 ; i-- )) ; do
-            if [[ $(echo ${lsblk_lines[i]} | grep "^lvm" | wc -l) > 0 ]]; then
-                    sed -i 's/\<block\>/& lvm2/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    continue
-            fi
-            if [[ $(echo ${lsblk_lines[i]} | grep "^crypt" | wc -l) > 0 ]]; then
-                    sed -i 's/\<block\>/& encrypt/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    sed -i 's/\<autodetect\>/& keymap/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    sed -i 's/\<autodetect\>/& keyboard/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    continue
-            fi
-            if [[ $(echo ${lsblk_lines[i]} | grep "^raid" | wc -l) > 0 ]]; then
-                    raid_needed=true
-                    raid_device_name=$(echo ${lsblk_lines[i]} | cut -f2 -d' ')
-                    continue
-            fi
-            if [[ $(echo ${lsblk_lines[i]} | grep "^part" | wc -l) > 0 ]]; then
-                    break
-            fi
-        done
-        
-    fi
-    
-    
-    # add mkinitcpio raid binary and hook, if root partition is on raid
-    if [ "$raid_needed" = true ]; then
 
-        # auto assemble raid
-        mdadm --detail --scan >> ${MOUNTPOINT}/etc/mdadm.conf
-        
-        # add raid initramfs hook 
-        sed -i 's/\<block\>/& mdadm_udev/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-        binaries_line_number=$(grep -n "^BINARIES=(" ${MOUNTPOINT}/etc/mkinitcpio.conf | cut -f1 -d':')
-        sed -i "${binaries_line_number}s/^\(.\{10\}\)/\1mdmon/" ${MOUNTPOINT}/etc/mkinitcpio.conf
-
-        # get newest kernel and initramfs
-        newest_kernel=$(ls ${MOUNTPOINT}/lib/modules | grep '^[0-9]' | sort | tail -n 1)
-        newest_initramfs=$(ls ${MOUNTPOINT}/boot | grep "initramfs" | grep -v "fallback"| sort | tail -n 1)
-        
-        # initramfs needs to be recomiled with raid support
-        manjaro-chroot ${MOUNTPOINT} mkinitcpio -c /etc/mkinitcpio.conf -g /boot/${newest_initramfs} -k ${newest_kernel}
-    
-    fi    
-    
     recheck_luks
     
     # add luks and lvm hooks as needed
