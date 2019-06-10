@@ -552,3 +552,22 @@ _DataRecBody="Various tools for data backup and recovery"
 _HostCache="Choose pacman cache"
 _HostCacheBody="Do you want to use the pacman cache of the running system instead of the installation target? This can reduce the size of the required downloads in the installation."
 
+#RAID menu
+_PrepRAID="RAID (optional)"
+
+_RAIDLevelTitle="Select a RAID level."
+_RAIDLevel0="disk striping"
+_RAIDLevel1="mirroring"
+_RAIDLevel5="distributed parity, (1 drive tolerance, requires 3 disks)"
+_RAIDLevel6="double parity, (2 drive tolerance, requires 4 disks)"
+_RAIDLevel10="raid 1+0, (requires 4 disks)"
+
+_PartitionSelectTitle="Partion Select"
+_PartitionSelectDescription="Select the partitions you want to use for this RAID array."
+
+_DeviceNameTitle="Device Name"
+_DeviceNameDescription="What would you like the RAID device to named? \nFor an example, its a standard for the first raid device in system to be named md0. "
+_DeviceNamePrefixWarning="(don't prefix with /dev/md/)"
+
+_ArrayCreatedTitle="Array Created"
+_ArrayCreatedDescription="The RAID array has been created successfully."

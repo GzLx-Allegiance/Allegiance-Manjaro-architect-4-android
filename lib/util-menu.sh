@@ -223,20 +223,21 @@ prep_menu() {
     local PARENT="$FUNCNAME"
     declare -i loopmenu=1
     while ((loopmenu)); do
-        submenu 13
+        submenu 14
         DIALOG " $_PrepMenuTitle " --default-item ${HIGHLIGHT_SUB} --menu "\n$_PrepMenuBody\n " 0 0 0 \
           "1" "$_VCKeymapTitle" \
           "2" "$_DevShowOpt" \
           "3" "$_PrepPartDisk|>" \
-          "4" "$_PrepLUKS|>" \
-          "5" "$_PrepLVM $_PrepLVM2|>" \
-          "6" "$_PrepZFS|>" \
-          "7" "$_PrepMntPart" \
-          "8" "$_PrepMirror|>" \
-          "9" "$_PrepPacKey" \
-          "10" "$_HostCache" \
-          "11" "Enable fsck hook" \
-          "12" "$_Back" 2>${ANSWER}
+	      "4" "$_PrepRAID|>" \
+	      "5" "$_PrepLVM $_PrepLVM2|>" \
+          "6" "$_PrepLUKS|>" \
+          "7" "$_PrepZFS|>" \
+          "8" "$_PrepMntPart" \
+          "9" "$_PrepMirror|>" \
+          "10" "$_PrepPacKey" \
+          "11" "$_HostCache" \
+          "12" "Enable fsck hook" \
+          "13" "$_Back" 2>${ANSWER}
         HIGHLIGHT_SUB=$(cat ${ANSWER})
 
         case $(cat ${ANSWER}) in
@@ -248,17 +249,19 @@ prep_menu() {
             "3") umount_partitions
                  select_device && create_partitions
                  ;;
-            "4") luks_menu
+            "4") raid_level_menu
                  ;;
             "5") lvm_menu
                  ;;
-            "6") zfs_menu
+            "6") luks_menu
                  ;;
-            "7") mount_partitions
+	    "7") zfs_menu
                  ;;
-            "8") configure_mirrorlist
+            "8") mount_partitions
                  ;;
-            "9") clear
+            "9") configure_mirrorlist
+                 ;;
+            "10") clear
                  (
                     ctrlc(){
                       return 0
@@ -269,9 +272,9 @@ prep_menu() {
                     check_for_error 'refresh pacman-keys'
                   )
                  ;;
-            "10") set_cache
+            "11") set_cache
                  ;;
-            "11") set_fsck_hook
+            "12") set_fsck_hook		
                  ;;
             *) loopmenu=0
                 return 0
