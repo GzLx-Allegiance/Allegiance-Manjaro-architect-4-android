@@ -3,7 +3,7 @@ CLI net-installer for Manjarolinux, forked from Carl Duff's Architect
 
 This installer provides netinstallation for different manjaro editions. It sources the iso-profiles git repo, so it should be always up to date. 
 
-**menu overview of v0.9.9:**
+**menu overview of v0.9.10:**
 
 ```
 Main Menu
@@ -12,6 +12,7 @@ Main Menu
 |   ├── Set Virtual Console
 |   ├── List Devices
 |   ├── Partition Disk
+|   ├── RAID 
 |   ├── LUKS Encryption
 |   ├── Logical Volume Management
 |   ├── Mount Partitions

@@ -553,3 +553,23 @@ _DataRecBody="Различные инструменты для резервно�
 
 _HostCache="Выберите кэш pacman"
 _HostCacheBody="Хотите ли вы использовать кэш pacman запущенной системы вместо кэша устанавливаемой системы? Это может уменьшить количество необходимых для скачивания файлов."
+
+#RAID menu
+_PrepRAID="RAID (optional)" # translate me !
+
+_RAIDLevelTitle="Select a RAID level."  # translate me !
+_RAIDLevel0="disk striping"  # translate me !
+_RAIDLevel1="mirroring"  # translate me !
+_RAIDLevel5="distributed parity, (1 drive tolerance, requires 3 disks)"  # translate me !
+_RAIDLevel6="double parity, (2 drive tolerance, requires 4 disks)"  # translate me !
+_RAIDLevel10="raid 1+0, (requires 4 disks)"  # translate me !
+
+_PartitionSelectTitle="Partion Select"  # translate me !
+_PartitionSelectDescription="Select the partitions you want to use for this RAID array."  # translate me !
+
+_DeviceNameTitle="Device Name"  # translate me !
+_DeviceNameDescription="What would you like the RAID device to named? \nFor an example, its a standard for the first raid device in system to be named md0. "  # translate me !
+_DeviceNamePrefixWarning="(don't prefix with /dev/md/)"  # translate me !
+
+_ArrayCreatedTitle="Array Created"  # translate me !
+_ArrayCreatedDescription="The RAID array has been created successfully."  # translate me !
