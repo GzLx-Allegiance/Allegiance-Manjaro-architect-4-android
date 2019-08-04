@@ -11,8 +11,7 @@
 # or modify it as you wish.
 
 setup_profiles() {
-    # setup profiles with either git or package 
-    if [[ -e /tmp/.git_profiles ]]; then 
+    # setup profiles with either git 
         PROFILES="$DATADIR/profiles"
         clear
         # install git if not already installed
@@ -25,13 +24,6 @@ setup_profiles() {
             git clone -b manjaro-architect --depth 1 https://gitlab.manjaro.org/profiles-and-settings/iso-profiles.git $PROFILES 2>$ERR
             check_for_error "clone profiles repo" $?
         fi
-    else
-        PROFILES="/usr/share/manjaro-tools/iso-profiles"
-        # Only show this information box once
-        clear
-        pacman -Sy --noconfirm $p manjaro-iso-profiles-{base,official,community} 2>$ERR
-        check_for_error "update profiles pkgs" $?
-    fi
 }
 
 enable_services() {
