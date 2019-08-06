@@ -26,8 +26,7 @@ _Change="Change"
 _NoCon="No Internet Detected."
 _EstCon="Establish connection?"
 _Config="Configure"
-_ApplySet="Apply 
-uage settings ..."
+_ApplySet="Apply language settings ..."
 _ChMenu="Select Menu"
 _ChMenuBody="The Regular Menu will guide you through the installation of a pre-configured Manjaro Environment with some additional choices.\n\nThe Advanced Menu can be used to install unconfigured desktops or Manjaro development profiles and also includes an additional selection of network and multimedia applications and some advanced options for system and security configuration."
 
