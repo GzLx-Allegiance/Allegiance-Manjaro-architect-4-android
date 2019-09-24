@@ -387,13 +387,13 @@ install_desktop() {
         
         for (( i=${#lsblk_lines[@]}-1 ; i>=0 ; i-- )) ; do
             if [[ $(echo ${lsblk_lines[i]} | grep "^lvm" | wc -l) > 0 ]]; then
-                    sed -i '/block lvm2/b; s/\<block\>/& lvm2/' ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    sed -i '/lvm2/b; s/\<block\>/& lvm2/' ${MOUNTPOINT}/etc/mkinitcpio.conf
                     continue
             fi
             if [[ $(echo ${lsblk_lines[i]} | grep "^crypt" | wc -l) > 0 ]]; then
-                    sed -i 's/\<block\>/& encrypt/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    sed -i 's/\<autodetect\>/& keymap/' ${MOUNTPOINT}/etc/mkinitcpio.conf
-                    sed -i 's/\<autodetect\>/& keyboard/' ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    sed -i '/encrypt/b; s/\<block\>/& encrypt/' ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    sed -i '/keymap/b; s/\<autodetect\>/& keymap/' ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    sed -i '/keyboard/b; s/\<autodetect\>/& keyboard/' ${MOUNTPOINT}/etc/mkinitcpio.conf
                     continue
             fi
             if [[ $(echo ${lsblk_lines[i]} | grep "^raid" | wc -l) > 0 ]]; then
