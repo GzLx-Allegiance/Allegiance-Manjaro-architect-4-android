@@ -387,7 +387,7 @@ install_desktop() {
         
         for (( i=${#lsblk_lines[@]}-1 ; i>=0 ; i-- )) ; do
             if [[ $(echo ${lsblk_lines[i]} | grep "^lvm" | wc -l) > 0 ]]; then
-                    sed -i 's/\<block\>/& lvm2/' ${MOUNTPOINT}/etc/mkinitcpio.conf
+                    sed -i '/block lvm2/b; s/\<block\>/& lvm2/' ${MOUNTPOINT}/etc/mkinitcpio.conf
                     continue
             fi
             if [[ $(echo ${lsblk_lines[i]} | grep "^crypt" | wc -l) > 0 ]]; then
