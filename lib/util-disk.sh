@@ -1425,7 +1425,11 @@ mount_partitions() {
         ROOT_PART=${PARTITION}
         echo ${ROOT_PART} > /tmp/.root_partitioni
         echo ${ROOT_PART} > /tmp/.root_partition
-        # Format with FS (or skip) -> # Make the directory and mount. Also identify LUKS and/or LVM
+        
+	# Reset the mountpoint variable, in case this is the second time through this menu and old state is still around
+	MOUNT=""
+
+	# Format with FS (or skip) -> # Make the directory and mount. Also identify LUKS and/or LVM
         select_filesystem && mount_current_partition || return 0
 
         ini mount.root "${PARTITION}"
