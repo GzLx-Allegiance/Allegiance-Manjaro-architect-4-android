@@ -146,9 +146,7 @@ install_xorg_input() {
       "xorg-xinit" "-" on \
       "xorg-server-xwayland" "-" off \
       "xf86-input-evdev" "-" off \
-      "xf86-input-keyboard" "-" on \
       "xf86-input-libinput" "-" on \
-      "xf86-input-mouse" "-" on \
       "xf86-input-synaptics" "-" off 2>${PACKAGES}
 
     clear
