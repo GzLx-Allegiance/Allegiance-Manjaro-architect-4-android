@@ -255,8 +255,10 @@ install_desktop() {
     declare -i loopmenu=1
     while ((loopmenu)); do
         # Choose kernel and possibly base-devel
-        DIALOG " $_InstBseTitle " --checklist "\n$_InstStandBseBody$_UseSpaceBar\n " 0 0 12 \
+        DIALOG " $_InstBseTitle " --checklist "\n$_InstStandBseBody$_UseSpaceBar\n " 0 0 15 \
           "yay + base-devel" "-" off \
+          "linux-lts" "-" off \
+          "linux-latest" "-" off \
           $(cat /tmp/.available_kernels | awk '$0=$0" - off"') 2>${PACKAGES} || { loopmenu=0; return 0; }
         if [[ ! $(grep "linux" ${PACKAGES}) ]]; then
             # Check if a kernel is already installed
