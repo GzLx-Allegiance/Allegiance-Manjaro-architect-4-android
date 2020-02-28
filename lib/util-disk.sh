@@ -1008,7 +1008,13 @@ lvm_del_all() {
 
 # returns a list of devices containing zfs members
 zfs_list_devs() {
-    zpool status -PL 2>/dev/null | awk '{print $1}' | grep "^/"
+    # get a list of devices with zpools on them
+    for device in $(zpool status -PL 2>/dev/null | awk '{print $1}' | grep "^/"); do
+        # add the device
+        echo $device
+        # now lets add any other forms of those devices
+        find -L /dev/ -xtype l -samefile ${device} 2>/dev/null
+    done
 }
 
 zfs_list_datasets() {
@@ -1064,9 +1070,14 @@ zfs_create_zpool() {
     # Find the UUID of the partition
     PARTUUID=$(lsblk -lno PATH,PARTUUID | grep "^${PARTITION}" | awk '{print $2}')
 
-    # Create the zpool
-    zpool create -m none ${ZFS_ZPOOL_NAME} ${PARTUUID} 2>$ERR
-    check_for_error "Creating zpool ${ZFS_ZPOOL_NAME} on device ${PARTITION} using partuuid ${PARTUUID}"
+    # See if the partition has a partuuid, if not use the device name
+    if [[ -n ${PARTUUID} ]]; then
+        zpool create -m none ${ZFS_ZPOOL_NAME} ${PARTUUID} 2>$ERR
+        check_for_error "Creating zpool ${ZFS_ZPOOL_NAME} on device ${PARTITION} using partuuid ${PARTUUID}"
+    else
+        zpool create -m none ${ZFS_ZPOOL_NAME} ${PARTITION} 2>$ERR
+        check_for_error "Creating zpool ${ZFS_ZPOOL_NAME} on device ${PARTITION}"
+    fi
 
     ZFS=1
 
