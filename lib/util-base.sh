@@ -18,10 +18,12 @@ setup_profiles() {
         inst_needed git
         # download manjaro-tools.-isoprofiles git repo
         if [[ -e $PROFILES ]]; then
-            git -C $PROFILES pull 2>$ERR
+            #git -C $PROFILES pull 2>$ERR
+            profile-validate -r 2>$ERR
             check_for_error "pull profiles repo" $?
         else
-            git clone -b manjaro-architect --depth 1 https://gitlab.manjaro.org/profiles-and-settings/iso-profiles.git $PROFILES 2>$ERR
+            profile-validate -r 2>$ERR
+            #git clone -b manjaro-architect --depth 1 https://gitlab.manjaro.org/profiles-and-settings/iso-profiles.git $PROFILES 2>$ERR
             check_for_error "clone profiles repo" $?
         fi
 }

@@ -241,7 +241,8 @@ install_desktop() {
     fi
     # Prep variables
     touch /tmp/.git_profiles
-    setup_profiles
+    #setup_profiles
+    PROFILES="$DATADIR/profiles"
     pkgs_src=$PROFILES/shared/Packages-Root
     pkgs_target=/mnt/.base
     BTRF_CHECK=$(echo "btrfs-progs" "" off)

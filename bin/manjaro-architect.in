@@ -14,7 +14,7 @@ version=@version@
 
 LIBDIR='@libdir@'
 DATADIR='@datadir@'
-
+PROFILES="$DATADIR/profiles"
 [[ -r ${LIBDIR}/util.sh ]] && source ${LIBDIR}/util.sh
 
 import ${LIBDIR}/ini_val.sh
@@ -51,4 +51,5 @@ else
 	hostcache=true
 	cachepath="/var/cache/pacman/pkg/"
 fi
+profile-validate -r &
 main_menu
